@@ -87,7 +87,7 @@
      (let loop ([p (tree-root a-tree)])
        (let ([r (node-right p)])
          (cond
-           [(eq? r '())
+           [(eq? r null)
             (set-node-right! p x)
             (set-node-parent! x p)]
            [else
@@ -144,28 +144,30 @@
 ;; fix/insert!: node 
 (define (fix/insert! a-tree z)
   (let loop ([z z])
-    (when (and (not (eq? (node-parent z) null))
-               (eq? (node-color (node-parent z)) red))
-      (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
-             (define y (node-right (node-parent (node-parent z))))
+    (define z.p (node-parent z))
+    (when (and (not (eq? z.p null))
+               (eq? (node-color z.p) red))
+      (define z.p.p (node-parent z.p))
+      (cond [(eq? z.p (node-left z.p.p))
+             (define y (node-right z.p.p))
              (cond [(and (not (eq? y null))
                          (eq? (node-color y) red))
-                    (set-node-color! (node-parent z) black)
+                    (set-node-color! z.p black)
                     (set-node-color! y black)
-                    (set-node-color! (node-parent (node-parent z)) red)
-                    (loop (node-parent (node-parent z)))]
+                    (set-node-color! z.p.p red)
+                    (loop z.p.p)]
                    [else
-                    (cond [(eq? z (node-right (node-parent z)))
-                           (let ([z (node-parent z)])
-                             (left-rotate! a-tree z)
-                             (set-node-color! (node-parent z) black)
-                             (set-node-color! (node-parent (node-parent z)) red)
-                             (right-rotate! a-tree (node-parent (node-parent z)))
-                             (loop z))]
+                    (cond [(eq? z (node-right z.p))
+                           (let ([new-z z.p])
+                             (left-rotate! a-tree new-z)
+                             (set-node-color! (node-parent new-z) black)
+                             (set-node-color! (node-parent (node-parent new-z)) red)
+                             (right-rotate! a-tree (node-parent (node-parent new-z)))
+                             (loop new-z))]
                           [else
-                           (set-node-color! (node-parent z) black)
-                           (set-node-color! (node-parent (node-parent z)) red)
-                           (right-rotate! a-tree (node-parent (node-parent z)))
+                           (set-node-color! z.p black)
+                           (set-node-color! z.p.p red)
+                           (right-rotate! a-tree z.p.p)
                            (loop z)])])]
             [else
              (define y (node-left (node-parent (node-parent z))))
@@ -192,15 +194,9 @@
 
 
 
-(define-syntax-rule (while test body ...)
-  (let loop () (when test body ... (loop))))
-
-
-
-
 (define (tree-items a-tree)
   (let loop ([node (tree-root a-tree)]
-             [acc '()])
+             [acc null])
     (cond
       [(null? node)
        acc]
@@ -232,7 +228,7 @@
     (let loop ([node (tree-root a-tree)])
       (cond
         [(null? node)
-         '()]
+         null]
         [else
          (list (format "~a:~a" 
                        (node-data node)
@@ -335,11 +331,20 @@
   (when (file-exists? "/usr/share/dict/words")
     (printf "Timing construction of /usr/share/dict/words:\n")
     (define t (new-tree))
+    (define all-words (call-with-input-file "/usr/share/dict/words" 
+                        (lambda (ip) (for/list ([line (in-lines ip)]) line))))
     (profile
-     (call-with-input-file "/usr/share/dict/words"
-       (lambda (ip)
-         (for ([word (in-lines ip)]
-               [i (in-naturals)])
-           #;(when (= 1 (modulo i 1000))
-               (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
-           (insert-back! t word (string-length word))))))))
+     #:delay 0.00001
+     (for ([word (in-list all-words)]
+           [i (in-naturals)])
+       #;(when (= 1 (modulo i 1000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
+       (insert-back! t word (string-length word))))
+    
+    (profile
+     #:delay 0.00001
+     (for ([word (in-list all-words)]
+           [i (in-naturals)])
+       #;(when (= 1 (modulo i 1000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
+       (insert-front! t word (string-length word))))))
