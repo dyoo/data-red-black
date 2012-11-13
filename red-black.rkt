@@ -343,8 +343,9 @@
         [(null? node)
          null]
         [else
-         (list (format "~a:~a" 
+         (list (format "~a:~a:~a" 
                        (node-data node)
+                       (node-subtree-width node)
                        (node-color node))
                (loop (node-left node))
                (loop (node-right node)))])))
@@ -398,7 +399,7 @@
          (check-equal? (tree-items t)
                        '(("c" 1) ("b" 1) ("a" 1)))
          (check-equal? (tree->list t)
-                       '("b:black" ("c:red" () ()) ("a:red" () ())))
+                       '("b:3:black" ("c:1:red" () ()) ("a:1:red" () ())))
          (check-rb-structure! t))
   
   (block (define t (new-tree))
