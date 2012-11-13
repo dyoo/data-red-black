@@ -47,7 +47,7 @@
         [(eq? x (node-left (node-parent x)))
          (set-node-left! (node-parent x) y)]
         [else
-         (set-node-right! (node-parent x)) y])
+         (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
   (update-width-to-root! x))
@@ -67,7 +67,7 @@
         [(eq? y (node-right (node-parent y)))
          (set-node-right! (node-parent y) x)]
         [else
-         (set-node-left! (node-parent y)) x])
+         (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
   (update-width-to-root! y))
@@ -144,7 +144,6 @@
 ;; Corrects the red/black tree property via node rotations after an insertion.
 ;; fix/insert!: node 
 (define (fix/insert! a-tree z)
-  (printf "Trying to fix ~a\n" z)
   (while (and (not (eq? (node-parent z) null))
               (eq? (node-color (node-parent z)) red))
     (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
@@ -184,18 +183,6 @@
   (let loop () (when test body ... (loop))))
 
 
-;; tree->list: tree -> list
-(define (tree->list a-tree)
-  (let loop ([node (tree-root a-tree)])
-    (cond
-      [(null? node)
-       '()]
-      [else
-       (list (format "~a:~a" 
-                     (node-data node)
-                     (node-color node))
-             (loop (node-left node))
-             (loop (node-right node)))])))
 
 
 (define (tree-items a-tree)
@@ -224,38 +211,54 @@
 
 (module+ test
   (require rackunit racket/block)
-
+  
+  
+  ;; tree->list: tree -> list
+  ;; For debugging: help visualize what the structure of the tree looks like.
+  (define (tree->list a-tree)
+    (let loop ([node (tree-root a-tree)])
+      (cond
+        [(null? node)
+         '()]
+        [else
+         (list (format "~a:~a" 
+                       (node-data node)
+                       (node-color node))
+               (loop (node-left node))
+               (loop (node-right node)))])))
+  
+  
   ;; checking rotations
-  #;(block 
-   (define t (new-tree))
-
-   (define alpha (node "alpha" 5 5 null null null null))
-   (define beta (node "beta" 4 5 null null null null))
-   (define gamma (node "gamma" 5 5 null null null null))
-
-   (define x (node "x" 1 1 null alpha beta null))
-   (define y (node "y" 1 1 null null gamma null))
-   (set-tree-root! t y)
-   (set-node-left! y x)
-   (set-node-parent! x y)
-   
-   (right-rotate! t y)
-   (check-eq? (tree-root t) x)
-   (check-eq? (node-left (tree-root t)) alpha)
-   (check-eq? (node-right (tree-root t)) y)
-   (check-eq? (node-left (node-right (tree-root t))) beta)
-   (check-eq? (node-right (node-right (tree-root t))) gamma)
-   
-   (left-rotate! t x)
-   (check-eq? (tree-root t) y)
-   (check-eq? (node-right (tree-root t)) gamma)
-   (check-eq? (node-left (tree-root t)) x)
-   (check-eq? (node-left (node-left (tree-root t))) alpha)
-   (check-eq? (node-right (node-left (tree-root t))) beta))
+  (block 
+     (define t (new-tree))
+     
+     (define alpha (node "alpha" 5 5 null null null null))
+     (define beta (node "beta" 4 5 null null null null))
+     (define gamma (node "gamma" 5 5 null null null null))
+     
+     (define x (node "x" 1 1 null alpha beta null))
+     (define y (node "y" 1 1 null null gamma null))
+     (set-tree-root! t y)
+     (set-node-left! y x)
+     (set-node-parent! x y)
+     
+     (right-rotate! t y)
+     (check-eq? (tree-root t) x)
+     (check-eq? (node-left (tree-root t)) alpha)
+     (check-eq? (node-right (tree-root t)) y)
+     (check-eq? (node-left (node-right (tree-root t))) beta)
+     (check-eq? (node-right (node-right (tree-root t))) gamma)
+     
+     (left-rotate! t x)
+     (check-eq? (tree-root t) y)
+     (check-eq? (node-right (tree-root t)) gamma)
+     (check-eq? (node-left (tree-root t)) x)
+     (check-eq? (node-left (node-left (tree-root t))) alpha)
+     (check-eq? (node-right (node-left (tree-root t))) beta))
   
   
   
-  #;(block (define t (new-tree))
+  (block (define t (new-tree))
            (insert-back! t "foobar" 6)
            (insert-back! t "hello" 5)
            (insert-back! t "world" 5)
@@ -264,59 +267,59 @@
                            ("hello" 5)
                            ("world" 5))))
   
-
+  
   (block (define t (new-tree))
          (insert-front! t "a" 1)
          (insert-front! t "b" 1)
          (insert-front! t "c" 1)
          (check-equal? (tree-items t)
                        '(("c" 1) ("b" 1) ("a" 1)))
-         (displayln (tree->list t)))
-
-  #;(block (define t (new-tree))
+         (check-equal? (tree->list t)
+                       '("b:black" ("c:red" () ()) ("a:red" () ()))))
+  
+  (block (define t (new-tree))
            (insert-front! t "alpha" 5)
            (insert-front! t "beta" 4)
            (insert-front! t "gamma" 5)
            (insert-front! t "delta" 5)
            (insert-front! t "omega" 5)
            (check-equal? (tree-items t)
-                         '(("omega" 5)("delta" 5)("gamma" 5) ("beta" 4) ("alpha" 5)))
-           (displayln (tree->list t)))
+                         '(("omega" 5)("delta" 5)("gamma" 5) ("beta" 4) ("alpha" 5))))
+
+ 
+  
+  (block (define t (new-tree))
+           (insert-back! t "hi" 2)
+           (insert-back! t "bye" 3)
+           (define the-root (tree-root t))
+           (check-equal? (node-left the-root)
+                         null)
+           (check-equal? (node-color the-root)
+                         black)
+           (check-equal? (node-subtree-width the-root) 5)
+           (check-equal? (node-color (node-right the-root))
+                         red))
+  
+  (block (define t (new-tree))
+           (insert-back! t "hi" 2)
+           (insert-back! t "bye" 3)
+           (insert-back! t "again" 5)
+           (define the-root (tree-root t))
+           (check-equal? (node-data (node-left the-root))
+                         "hi")
+           (check-equal? (node-data the-root)
+                         "bye")
+           (check-equal? (node-data (node-right the-root))
+                         "again")
+           (check-equal? (node-color the-root)
+                         black)
+           (check-equal? (node-color (node-left the-root)) red)
+           (check-equal? (node-color (node-right the-root)) red)
+           (check-equal? (node-subtree-width the-root) 10))
   
   
-  #;(block (define t (new-tree))
-         (insert-back! t "hi" 2)
-         (insert-back! t "bye" 3)
-         (define the-root (tree-root t))
-         (check-equal? (node-left the-root)
-                       null)
-         (check-equal? (node-color the-root)
-                       black)
-         (check-equal? (node-subtree-width the-root) 5)
-         (check-equal? (node-color (node-right the-root))
-                       red))
   
-  #;(block (define t (new-tree))
-         (insert-back! t "hi" 2)
-         (insert-back! t "bye" 3)
-         (insert-back! t "again" 5)
-         (define the-root (tree-root t))
-         (displayln the-root)
-         (check-equal? (node-data (node-left the-root))
-                       "hi")
-         (check-equal? (node-data the-root)
-                       "bye")
-         (check-equal? (node-data (node-right the-root))
-                       "again")
-         (check-equal? (node-color the-root)
-                       black)
-         (check-equal? (node-color (node-left the-root)) red)
-         (check-equal? (node-color (node-right the-root)) red)
-         (check-equal? (node-subtree-width the-root) 10))
-  
-  
-  
-  #;(when (file-exists? "/usr/share/dict/words")
+  (when (file-exists? "/usr/share/dict/words")
       (printf "Timing construction of /usr/share/dict/words:\n")
       (define t (new-tree))
       (time
