@@ -160,7 +160,7 @@
               (define residual-offset (- offset left-subtree-width))
               (define self-width (node-self-width a-node))
               (cond
-                [(< offset self-width)
+                [(< residual-offset self-width)
                  a-node]
                 [else
                  (loop (- residual-offset self-width)
@@ -463,7 +463,6 @@
          (define words (string-split "This is a test of the emergency broadcast system"))
          (for ([word (in-list words)])
            (insert-back! t word (string-length word)))
-         (displayln (tree->list t))
          (check-equal? (node-data (search t 0)) "This")
          (check-equal? (node-data (search t 1)) "This")
          (check-equal? (node-data (search t 2)) "This")
