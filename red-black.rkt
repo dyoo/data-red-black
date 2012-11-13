@@ -19,8 +19,7 @@
 
 
 (struct tree (root)  ;; node
-  #:mutable
-  #:transparent)
+  #:mutable)
 
 (struct node (data          ;; Any
               self-width    ;; Natural
@@ -29,8 +28,7 @@
               left       ;; (U Node null)
               right      ;; (U Node null)
               color)     ;; (U red black)
-  #:mutable
-  #:transparent)
+  #:mutable)
 
 
 
@@ -257,9 +255,14 @@
          (loop (node-right node))]))
     
     ;; As should the overall height:
-    (when (> (tree-height a-tree) (* 2 (/ (log (tree-node-count a-tree)) 
-                                          (log 2))))
-      (error 'check-rb-structure "rb violation: height beyond 2 ln(size)")))
+    (define count (tree-node-count a-tree))
+    (define height (tree-height a-tree))
+    (define (lg n) (/ (log n) (log 2)))
+    (when (> height (* 2 (lg (add1 count))))
+      (error 'check-rb-structure 
+             (format "rb violation: height ~a beyond 2 lg(~a)=~a" 
+                     height (add1 count)
+                     (* 2 (log (add1 count)))))))
   
   ;; tree->list: tree -> list
   ;; For debugging: help visualize what the structure of the tree looks like.
@@ -366,30 +369,29 @@
          (check-equal? (node-subtree-width the-root) 10))
   
   
-  
+  ;; Stress test
   (when (file-exists? "/usr/share/dict/words")
     (printf "Timing construction of /usr/share/dict/words:\n")
     (define t (new-tree))
     (define all-words (call-with-input-file "/usr/share/dict/words" 
                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
+    (collect-garbage)
     (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
-       #;(when (= 1 (modulo i 1000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
+       (when (= 1 (modulo i 10000))
+         (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+         (check-rb-structure! t))
        (insert-back! t word (string-length word))))
-    
+    ;; Be aware that the GC may make the following with insert-front! might make
+    ;; it look like the first time we build the tree, it's faster than the
+    ;; second time around.
+    ;; The explicit calls to collect-garbage here are just to eliminate that effect.
+    (collect-garbage)
     (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
-       #;(when (= 1 (modulo i 1000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
-       (insert-front! t word (string-length word))))
-    
-    ;; A bit of  a test to see that rb structure doesn't break.
-    (for ([word (in-list all-words)]
-          [i (in-range 100)])
-      (insert-back! t word (string-length word))
-      (check-rb-structure! t)
-      (insert-front! t word (string-length word))
-      (check-rb-structure! t))))
+       (when (= 1 (modulo i 10000))
+         (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+         (check-rb-structure! t))
+       (insert-front! t word (string-length word))))))
