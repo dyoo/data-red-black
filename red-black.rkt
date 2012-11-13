@@ -483,6 +483,39 @@
          (check-equal? (node-data (search t 25)) "broadcast")
          (check-equal? (node-data (search t 34)) "system"))
   
+  (block
+   (when (file-exists? "/usr/share/dict/words")
+     (define t (new-tree))
+     (define all-words (call-with-input-file "/usr/share/dict/words" 
+                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
+     
+     (for ([word (in-list all-words)])
+       (insert-back! t word (string-length word)))
+     
+     (check-rb-structure! t)
+     
+     (for/fold ([offset 0]) ([word (in-list all-words)])
+       (check-equal? (node-data (search t offset)) word)
+       (+ offset (string-length word))))
+   (void))
+  
+  ;; Do it backwards
+  (block
+   (when (file-exists? "/usr/share/dict/words")
+     (define t (new-tree))
+     (define all-words (call-with-input-file "/usr/share/dict/words" 
+                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
+     (for ([word (in-list (reverse all-words))])
+       (insert-front! t word (string-length word)))
+     
+     (check-rb-structure! t)
+     
+     (for/fold ([offset 0]) ([word (in-list all-words)])
+       (check-equal? (node-data (search t offset)) word)
+       (+ offset (string-length word))))
+   (void))
+  
+  
   
   ;; Stress test
   (define (stress-test)
