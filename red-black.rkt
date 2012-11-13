@@ -143,18 +143,13 @@
 ;; Corrects the red/black tree property via node rotations after an insertion.
 ;; fix/insert!: node 
 (define (fix/insert! a-tree z)
-  
-  ;; For the purposes of fix/insert!, the null node is also treated as a black node.
-  (define-syntax-rule (color n)
-    (if (null? n)
-        black
-        (node-color n)))
   (let loop ([z z])
     (when (and (not (eq? (node-parent z) null))
-                (eq? (node-color (node-parent z)) red))
+               (eq? (node-color (node-parent z)) red))
       (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
              (define y (node-right (node-parent (node-parent z))))
-             (cond [(eq? (color y) red)
+             (cond [(and (not (eq? y null))
+                         (eq? (node-color y) red))
                     (set-node-color! (node-parent z) black)
                     (set-node-color! y black)
                     (set-node-color! (node-parent (node-parent z)) red)
@@ -174,7 +169,8 @@
                            (loop z)])])]
             [else
              (define y (node-left (node-parent (node-parent z))))
-             (cond [(eq? (color y) red)
+             (cond [(and (not (eq? y null))
+                         (eq? (node-color y) red))
                     (set-node-color! (node-parent z) black)
                     (set-node-color! y black)
                     (set-node-color! (node-parent (node-parent z)) red)
