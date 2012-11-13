@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 
 ;; Implementation of an augmented red-black trees; extra information supports
 ;; position-based queries, as used in tokenization.
@@ -11,6 +11,8 @@
 ;; In our case, each node remembers the total width of the subtree.  This allows
 ;; us to perform position queries in time proportional to the tree height.
 ;;
+
+(require profile)
 
 
 (define red 'red)
@@ -83,12 +85,13 @@
      (set-tree-root! a-tree x)]
     [else
      (let loop ([p (tree-root a-tree)])
-       (cond
-         [(eq? (node-right p) '())
-          (set-node-right! p x)
-          (set-node-parent! x p)]
-         [else
-          (loop (node-right p))]))])
+       (let ([r (node-right p)])
+         (cond
+           [(eq? r '())
+            (set-node-right! p x)
+            (set-node-parent! x p)]
+           [else
+            (loop r)])))])
   (update-width-to-root! x)
   (fix/insert! a-tree x))
 
@@ -103,12 +106,13 @@
      (set-node-parent! x null)]
     [else
      (let loop ([p (tree-root a-tree)])
-       (cond
-         [(eq? (node-left p) null)
-          (set-node-left! p x)
-          (set-node-parent! x p)]
-         [else
-          (loop (node-left p))]))])
+       (let ([l (node-left p)])
+         (cond
+           [(eq? l null)
+            (set-node-left! p x)
+            (set-node-parent! x p)]
+           [else
+            (loop l)])))])
   (update-width-to-root! x)
   (fix/insert! a-tree x))
 
@@ -145,38 +149,49 @@
     (if (null? n)
         black
         (node-color n)))
-  
-  (while (and (not (eq? (node-parent z) null))
-              (eq? (node-color (node-parent z)) red))
-    (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
-           (define y (node-right (node-parent (node-parent z))))
-           (cond [(eq? (color y) red)
-                  (set-node-color! (node-parent z) black)
-                  (set-node-color! y black)
-                  (set-node-color! (node-parent (node-parent z)) red)
-                  (set! z (node-parent (node-parent z)))]
-                 [else
-                  (when (eq? z (node-right (node-parent z)))
-                    (set! z (node-parent z))
-                    (left-rotate! a-tree z))
-                  (set-node-color! (node-parent z) black)
-                  (set-node-color! (node-parent (node-parent z)) red)
-                  (right-rotate! a-tree (node-parent (node-parent z)))])]
-          
-          [else
-           (define y (node-left (node-parent (node-parent z))))
-           (cond [(eq? (color y) red)
-                  (set-node-color! (node-parent z) black)
-                  (set-node-color! y black)
-                  (set-node-color! (node-parent (node-parent z)) red)
-                  (set! z (node-parent (node-parent z)))]
-                 [else
-                  (when (eq? z (node-left (node-parent z)))
-                    (set! z (node-parent z))
-                    (right-rotate! a-tree z))
-                  (set-node-color! (node-parent z) black)
-                  (set-node-color! (node-parent (node-parent z)) red)
-                  (left-rotate! a-tree (node-parent (node-parent z)))])]))
+  (let loop ([z z])
+    (when (and (not (eq? (node-parent z) null))
+                (eq? (node-color (node-parent z)) red))
+      (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
+             (define y (node-right (node-parent (node-parent z))))
+             (cond [(eq? (color y) red)
+                    (set-node-color! (node-parent z) black)
+                    (set-node-color! y black)
+                    (set-node-color! (node-parent (node-parent z)) red)
+                    (loop (node-parent (node-parent z)))]
+                   [else
+                    (cond [(eq? z (node-right (node-parent z)))
+                           (let ([z (node-parent z)])
+                             (left-rotate! a-tree z)
+                             (set-node-color! (node-parent z) black)
+                             (set-node-color! (node-parent (node-parent z)) red)
+                             (right-rotate! a-tree (node-parent (node-parent z)))
+                             (loop z))]
+                          [else
+                           (set-node-color! (node-parent z) black)
+                           (set-node-color! (node-parent (node-parent z)) red)
+                           (right-rotate! a-tree (node-parent (node-parent z)))
+                           (loop z)])])]
+            [else
+             (define y (node-left (node-parent (node-parent z))))
+             (cond [(eq? (color y) red)
+                    (set-node-color! (node-parent z) black)
+                    (set-node-color! y black)
+                    (set-node-color! (node-parent (node-parent z)) red)
+                    (loop (node-parent (node-parent z)))]
+                   [else
+                    (cond [(eq? z (node-left (node-parent z)))
+                           (let ([z (node-parent z)])
+                             (right-rotate! a-tree z)
+                             (set-node-color! (node-parent z) black)
+                             (set-node-color! (node-parent (node-parent z)) red)
+                             (left-rotate! a-tree (node-parent (node-parent z)))
+                             (loop z))]
+                          [else
+                           (set-node-color! (node-parent z) black)
+                           (set-node-color! (node-parent (node-parent z)) red)
+                           (left-rotate! a-tree (node-parent (node-parent z)))
+                           (loop z)])])])))
   (set-node-color! (tree-root a-tree) black))
 
 
@@ -324,7 +339,7 @@
   (when (file-exists? "/usr/share/dict/words")
     (printf "Timing construction of /usr/share/dict/words:\n")
     (define t (new-tree))
-    (time
+    (profile
      (call-with-input-file "/usr/share/dict/words"
        (lambda (ip)
          (for ([word (in-lines ip)]
