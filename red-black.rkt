@@ -234,15 +234,33 @@
        (loop (node-left node) (loop (node-right node) (add1 acc)))])))
 
 
+
+
 (module+ test
   (require rackunit racket/block)
   
+  ;; Debugging: counts the number of black nodes.
+  (define (node-count-black a-node)
+    (let loop ([a-node a-node]
+               [acc 0])
+      (cond
+        [(null? a-node)
+         acc]
+        [else
+         (loop (node-left a-node) 
+               (loop (node-right a-node)
+                     (+ (if (eq? black (node-color a-node)) 1 0)
+                        acc)))])))
   
-  ;; A little helper to ensure tree-structure is as expected.
+  
+  ;; A heavy debugging function to ensure tree-structure is as expected.
+  ;; Note: this functions is EXTRAORDINARILY expensive.  Do not use this
+  ;; outside of tests.
   (define (check-rb-structure! a-tree)
     (define (color n)
       (if (null? n) black (node-color n)))
-    ;; The rb property should hold:
+    
+    ;; No two red nodes should be adjacent:
     (let loop ([node (tree-root a-tree)])
       (cond
         [(null? node)
@@ -251,6 +269,18 @@
          (when (or (eq? red (color (node-left node)))
                    (eq? red (color (node-right node))))
            (error 'check-rb-structure "rb violation: two reds are adjacent"))
+         (loop (node-left node))
+         (loop (node-right node))]))
+    
+    ;; The left and right sides should be black-balanced, for all subtrees.
+    (let loop ([node (tree-root a-tree)])
+      (cond
+        [(null? node)
+         (void)]
+        [else
+         (unless (= (node-count-black (node-left node))
+                    (node-count-black (node-right node)))
+           (error 'check-rb-structure "rb violation: not black-balanced"))
          (loop (node-left node))
          (loop (node-right node))]))
     
@@ -379,9 +409,9 @@
     (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
-       (when (= 1 (modulo i 10000))
+       ;(when (= 1 (modulo i 10000))
          (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-         (check-rb-structure! t))
+         (check-rb-structure! t);)
        (insert-back! t word (string-length word))))
     ;; Be aware that the GC may make the following with insert-front! might make
     ;; it look like the first time we build the tree, it's faster than the
