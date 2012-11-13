@@ -1,17 +1,19 @@
 #lang racket/base
 (require (for-syntax racket/base))
 
-;; Implementation of an augmented red-black trees; extra information supports
-;; position-based queries, as used in tokenization.
+;; Implementation of an augmented red-black tree, where extra
+;; information supports position-based queries, as used in
+;; tokenization.
 ;;
-;; The elements in the tree are intended to be tokens with a particular width;
-;; we wish to make it easy to represent a sequence of tokens, and also
-;; insert at the front and back.
+;; The elements in the tree are intended to be tokens with a
+;; particular width; we wish to make it easy to represent a sequence
+;; of tokens, and also insert at the front and back.
 ;;
-;; We follow the basic outline for order-statistic trees described in CLRS.
-;; In our case, each node remembers the total width of the subtree.  This allows
-;; us to perform position queries in time proportional to the tree height.
-;;
+;; We follow the basic outline for order-statistic trees described in
+;; CLRS.  In our case, each node remembers the total width of the
+;; subtree.  This allows us to perform search-by-position very
+;; quickly.
+;; 
 
 
 (define red 'red)
@@ -457,6 +459,34 @@
          (check-equal? (node-data (search t 3)) "hello")
          (check-equal? (node-data (search t 4)) "hello")
          (check-equal? (search t 5) null))
+
+
+  ;; Empty nodes should get skipped over by search, though
+  ;; the nodes are still there in the tree.
+  (block (define t (new-tree))
+         (insert-back! t "hello" 5)
+         (insert-back! t "" 0)
+         (insert-back! t "" 0)
+         (insert-back! t "" 0)
+         (insert-back! t "world" 5)
+         (insert-back! t "" 0)
+         (insert-back! t "" 0)
+         (insert-back! t "" 0)
+         (insert-back! t "test!" 5)
+         (check-equal? (tree-node-count t) 9)
+         (check-equal? (node-data (search t 0)) "hello")
+         (check-equal? (node-data (search t 1)) "hello")
+         (check-equal? (node-data (search t 2)) "hello")
+         (check-equal? (node-data (search t 3)) "hello")
+         (check-equal? (node-data (search t 4)) "hello")
+         (check-equal? (node-data (search t 5)) "world")
+         (check-equal? (node-data (search t 6)) "world")
+         (check-equal? (node-data (search t 7)) "world")
+         (check-equal? (node-data (search t 8)) "world")
+         (check-equal? (node-data (search t 9)) "world")
+         (check-equal? (node-data (search t 10)) "test!"))
+
+
   
   
   (block (define t (new-tree))
