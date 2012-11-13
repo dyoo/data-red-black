@@ -31,6 +31,8 @@
   #:transparent)
 
 
+
+
 ;; left-rotate!: tree node -> void
 ;; Rotates the x node node to the left.
 ;; Preserves the auxiliary information for position queries.
@@ -133,22 +135,26 @@
   (tree null))
 
 
-;; Correct the red/black tree property via node rotations after an insertion.
+(define (color n)
+  (if (null? n)
+      black
+      (node-color n)))
+
+
+;; Corrects the red/black tree property via node rotations after an insertion.
 ;; fix/insert!: node 
 (define (fix/insert! a-tree z)
+  (printf "Trying to fix ~a\n" z)
   (while (and (not (eq? (node-parent z) null))
               (eq? (node-color (node-parent z)) red))
-    (cond [(eq? (node-parent z) (node-right (node-parent (node-parent z))))
-           (displayln "case 1")
+    (cond [(eq? (node-parent z) (node-left (node-parent (node-parent z))))
            (define y (node-right (node-parent (node-parent z))))
-           (cond [(eq? (node-color y) red)
-                  (displayln "case 3")
+           (cond [(eq? (color y) red)
                   (set-node-color! (node-parent z) black)
                   (set-node-color! y black)
                   (set-node-color! (node-parent (node-parent z)) red)
                   (set! z (node-parent (node-parent z)))]
                  [else
-                  (displayln "case 4")
                   (when (eq? z (node-right (node-parent z)))
                     (set! z (node-parent z))
                     (left-rotate! a-tree z))
@@ -157,9 +163,8 @@
                   (right-rotate! a-tree (node-parent (node-parent z)))])]
           
           [else
-           (displayln "case 2")
            (define y (node-left (node-parent (node-parent z))))
-           (cond [(eq? (node-color y) red)
+           (cond [(eq? (color y) red)
                   (set-node-color! (node-parent z) black)
                   (set-node-color! y black)
                   (set-node-color! (node-parent (node-parent z)) red)
@@ -221,7 +226,7 @@
   (require rackunit racket/block)
 
   ;; checking rotations
-  (block 
+  #;(block 
    (define t (new-tree))
 
    (define alpha (node "alpha" 5 5 null null null null))
@@ -250,7 +255,7 @@
   
   
   
-  (block (define t (new-tree))
+  #;(block (define t (new-tree))
            (insert-back! t "foobar" 6)
            (insert-back! t "hello" 5)
            (insert-back! t "world" 5)
@@ -259,7 +264,16 @@
                            ("hello" 5)
                            ("world" 5))))
   
+
   (block (define t (new-tree))
+         (insert-front! t "a" 1)
+         (insert-front! t "b" 1)
+         (insert-front! t "c" 1)
+         (check-equal? (tree-items t)
+                       '(("c" 1) ("b" 1) ("a" 1)))
+         (displayln (tree->list t)))
+
+  #;(block (define t (new-tree))
            (insert-front! t "alpha" 5)
            (insert-front! t "beta" 4)
            (insert-front! t "gamma" 5)
@@ -270,7 +284,7 @@
            (displayln (tree->list t)))
   
   
-  (block (define t (new-tree))
+  #;(block (define t (new-tree))
          (insert-back! t "hi" 2)
          (insert-back! t "bye" 3)
          (define the-root (tree-root t))
