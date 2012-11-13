@@ -142,7 +142,7 @@
     (if (null? n)
         0
         (node-subtree-width n)))
-
+  
   (let loop ([offset offset]
              [a-node (tree-root a-tree)])
     (cond
@@ -163,10 +163,11 @@
                 [(< offset self-width)
                  a-node]
                 [else
-                 (loop (- residual-offset self-width))])])])))
-       
-      
-         
+                 (loop (- residual-offset self-width)
+                       (node-right a-node))])])])))
+
+
+
 
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
@@ -271,7 +272,7 @@
 
 
 (module+ test
-  (require rackunit racket/block)
+  (require rackunit racket/block racket/string)
   
   ;; Debugging: counts the number of black nodes.
   (define (node-count-black a-node)
@@ -386,7 +387,8 @@
          (check-equal? (tree-items t)
                        '(("foobar" 6)
                          ("hello" 5)
-                         ("world" 5))))
+                         ("world" 5)))
+         (check-rb-structure! t))
   
   
   (block (define t (new-tree))
@@ -396,7 +398,8 @@
          (check-equal? (tree-items t)
                        '(("c" 1) ("b" 1) ("a" 1)))
          (check-equal? (tree->list t)
-                       '("b:black" ("c:red" () ()) ("a:red" () ()))))
+                       '("b:black" ("c:red" () ()) ("a:red" () ())))
+         (check-rb-structure! t))
   
   (block (define t (new-tree))
          (insert-front! t "alpha" 5)
@@ -405,7 +408,8 @@
          (insert-front! t "delta" 5)
          (insert-front! t "omega" 5)
          (check-equal? (tree-items t)
-                       '(("omega" 5)("delta" 5)("gamma" 5) ("beta" 4) ("alpha" 5))))
+                       '(("omega" 5)("delta" 5)("gamma" 5) ("beta" 4) ("alpha" 5)))
+         (check-rb-structure! t))
   
   
   
@@ -419,7 +423,8 @@
                        black)
          (check-equal? (node-subtree-width the-root) 5)
          (check-equal? (node-color (node-right the-root))
-                       red))
+                       red)
+         (check-rb-structure! t))
   
   (block (define t (new-tree))
          (insert-back! t "hi" 2)
@@ -436,32 +441,73 @@
                        black)
          (check-equal? (node-color (node-left the-root)) red)
          (check-equal? (node-color (node-right the-root)) red)
-         (check-equal? (node-subtree-width the-root) 10))
+         (check-equal? (node-subtree-width the-root) 10)
+         (check-rb-structure! t))
+  
+  (block (define t (new-tree))
+         (check-equal? (search t 0) null)
+         (check-equal? (search t 129348) null))
+  
+  (block (define t (new-tree))
+         (insert-back! t "hello" 5)
+         (check-equal? (node-data (search t 0)) "hello")
+         (check-equal? (node-data (search t 1)) "hello")
+         (check-equal? (node-data (search t 2)) "hello")
+         (check-equal? (node-data (search t 3)) "hello")
+         (check-equal? (node-data (search t 4)) "hello")
+         (check-equal? (search t 5) null))
+  
+  
+  (block (define t (new-tree))
+         (define words (string-split "This is a test of the emergency broadcast system"))
+         (for ([word (in-list words)])
+           (insert-back! t word (string-length word)))
+         (displayln (tree->list t))
+         (check-equal? (node-data (search t 0)) "This")
+         (check-equal? (node-data (search t 1)) "This")
+         (check-equal? (node-data (search t 2)) "This")
+         (check-equal? (node-data (search t 3)) "This")
+         (check-equal? (node-data (search t 4)) "is")
+         (check-equal? (node-data (search t 5)) "is")
+         (check-equal? (node-data (search t 6)) "a")
+         (check-equal? (node-data (search t 7)) "test")
+         (check-equal? (node-data (search t 8)) "test")
+         (check-equal? (node-data (search t 9)) "test")
+         (check-equal? (node-data (search t 10)) "test")
+         (check-equal? (node-data (search t 11)) "of")
+         (check-equal? (node-data (search t 12)) "of")
+         (check-equal? (node-data (search t 13)) "the")
+         (check-equal? (node-data (search t 14)) "the")
+         (check-equal? (node-data (search t 15)) "the")
+         (check-equal? (node-data (search t 16)) "emergency")
+         (check-equal? (node-data (search t 25)) "broadcast")
+         (check-equal? (node-data (search t 34)) "system"))
   
   
   ;; Stress test
-  (when (file-exists? "/usr/share/dict/words")
-    (printf "Timing construction of /usr/share/dict/words:\n")
-    (define t (new-tree))
-    (define all-words (call-with-input-file "/usr/share/dict/words" 
-                        (lambda (ip) (for/list ([line (in-lines ip)]) line))))
-    (collect-garbage)
-    (time
-     (for ([word (in-list all-words)]
-           [i (in-naturals)])
-       (when (= 1 (modulo i 10000))
-         (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-         (check-rb-structure! t))
-       (insert-back! t word (string-length word))))
-    ;; Be aware that the GC may make the following with insert-front! might make
-    ;; it look like the first time we build the tree, it's faster than the
-    ;; second time around.
-    ;; The explicit calls to collect-garbage here are just to eliminate that effect.
-    (collect-garbage)
-    (time
-     (for ([word (in-list all-words)]
-           [i (in-naturals)])
-       (when (= 1 (modulo i 10000))
-         (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-         (check-rb-structure! t))
-       (insert-front! t word (string-length word))))))
+  (define (stress-test)
+    (when (file-exists? "/usr/share/dict/words")
+      (printf "Timing construction of /usr/share/dict/words:\n")
+      (define t (new-tree))
+      (define all-words (call-with-input-file "/usr/share/dict/words" 
+                          (lambda (ip) (for/list ([line (in-lines ip)]) line))))
+      (collect-garbage)
+      (time
+       (for ([word (in-list all-words)]
+             [i (in-naturals)])
+         (when (= 1 (modulo i 10000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (check-rb-structure! t))
+         (insert-back! t word (string-length word))))
+      ;; Be aware that the GC may make the following with insert-front! might make
+      ;; it look like the first time we build the tree, it's faster than the
+      ;; second time around.
+      ;; The explicit calls to collect-garbage here are just to eliminate that effect.
+      (collect-garbage)
+      (time
+       (for ([word (in-list all-words)]
+             [i (in-naturals)])
+         (when (= 1 (modulo i 10000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (check-rb-structure! t))
+         (insert-front! t word (string-length word)))))))
