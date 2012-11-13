@@ -247,10 +247,15 @@
         [(null? a-node)
          acc]
         [else
-         (loop (node-left a-node) 
-               (loop (node-right a-node)
-                     (+ (if (eq? black (node-color a-node)) 1 0)
-                        acc)))])))
+         (define right-count (loop (node-right a-node)
+                                   (+ (if (eq? black (node-color a-node)) 1 0)
+                                      acc)))
+         (define left-count  (loop (node-left a-node) 
+                                   (+ (if (eq? black (node-color a-node)) 1 0)
+                                      acc)))
+         (unless (= right-count left-count)
+           (error 'node-count-black))
+         right-count])))
   
   
   ;; A heavy debugging function to ensure tree-structure is as expected.
@@ -280,6 +285,7 @@
         [else
          (unless (= (node-count-black (node-left node))
                     (node-count-black (node-right node)))
+           (displayln (tree->list a-tree))
            (error 'check-rb-structure "rb violation: not black-balanced"))
          (loop (node-left node))
          (loop (node-right node))]))
@@ -409,9 +415,9 @@
     (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
-       ;(when (= 1 (modulo i 10000))
+       (when (= 1 (modulo i 10000))
          (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-         (check-rb-structure! t);)
+         (check-rb-structure! t))
        (insert-back! t word (string-length word))))
     ;; Be aware that the GC may make the following with insert-front! might make
     ;; it look like the first time we build the tree, it's faster than the
