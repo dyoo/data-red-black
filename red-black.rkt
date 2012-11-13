@@ -226,9 +226,42 @@
                  (loop (node-right node))))])))
 
 
+;; tree-node-count: tree -> natural
+;; Counts the nodes of the tree.
+(define (tree-node-count a-tree)
+  (let loop ([node (tree-root a-tree)]
+             [acc 0])
+    (cond
+      [(null? node)
+       acc]
+      [else
+       (loop (node-left node) (loop (node-right node) (add1 acc)))])))
+
+
 (module+ test
   (require rackunit racket/block)
   
+  
+  ;; A little helper to ensure tree-structure is as expected.
+  (define (check-rb-structure! a-tree)
+    (define (color n)
+      (if (null? n) black (node-color n)))
+    ;; The rb property should hold:
+    (let loop ([node (tree-root a-tree)])
+      (cond
+        [(null? node)
+         (void)]
+        [(eq? red (color node))
+         (when (or (eq? red (color (node-left node)))
+                   (eq? red (color (node-right node))))
+           (error 'check-rb-structure "rb violation: two reds are adjacent"))
+         (loop (node-left node))
+         (loop (node-right node))]))
+    
+    ;; As should the overall height:
+    (when (> (tree-height a-tree) (* 2 (/ (log (tree-node-count a-tree)) 
+                                          (log 2))))
+      (error 'check-rb-structure "rb violation: height beyond 2 ln(size)")))
   
   ;; tree->list: tree -> list
   ;; For debugging: help visualize what the structure of the tree looks like.
@@ -341,18 +374,24 @@
     (define t (new-tree))
     (define all-words (call-with-input-file "/usr/share/dict/words" 
                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
-    (profile
-     #:delay 0.00001
+    (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
        #;(when (= 1 (modulo i 1000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
        (insert-back! t word (string-length word))))
     
-    (profile
-     #:delay 0.00001
+    (time
      (for ([word (in-list all-words)]
            [i (in-naturals)])
        #;(when (= 1 (modulo i 1000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t)))
-       (insert-front! t word (string-length word))))))
+       (insert-front! t word (string-length word))))
+    
+    ;; A bit of  a test to see that rb structure doesn't break.
+    (for ([word (in-list all-words)]
+          [i (in-range 100)])
+      (insert-back! t word (string-length word))
+      (check-rb-structure! t)
+      (insert-front! t word (string-length word))
+      (check-rb-structure! t))))
