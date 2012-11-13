@@ -134,6 +134,40 @@
      (update-width-to-root! (node-parent a-node))]))
 
 
+;; search: tree natural -> (U node null)
+;; Search for the node closest to offset.
+;; Making the total length of the left tree at least offset, if possible.
+(define (search a-tree offset)
+  (define-syntax-rule (subtree-width n)
+    (if (null? n)
+        0
+        (node-subtree-width n)))
+
+  (let loop ([offset offset]
+             [a-node (tree-root a-tree)])
+    (cond
+      [(null? a-node) null]
+      [else
+       (define left (node-left a-node))
+       (define left-subtree-width (subtree-width left))
+       (cond [(< offset left-subtree-width)
+              (cond
+                [(null? left)
+                 a-node]
+                [else
+                 (loop offset left)])]
+             [else 
+              (define residual-offset (- offset left-subtree-width))
+              (define self-width (node-self-width a-node))
+              (cond
+                [(< offset self-width)
+                 a-node]
+                [else
+                 (loop (- residual-offset self-width))])])])))
+       
+      
+         
+
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
 (define (new-tree)
