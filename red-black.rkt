@@ -13,8 +13,6 @@
 ;; us to perform position queries in time proportional to the tree height.
 ;;
 
-(require profile)
-
 
 (define red 'red)
 (define black 'black)
