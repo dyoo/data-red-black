@@ -1,4 +1,5 @@
 #lang racket/base
+(require (for-syntax racket/base))
 
 ;; Implementation of an augmented red-black trees; extra information supports
 ;; position-based queries, as used in tokenization.
@@ -17,6 +18,7 @@
 
 (define red 'red)
 (define black 'black)
+
 
 (struct tree (root)  ;; node
   #:mutable
@@ -41,10 +43,10 @@
 (define (left-rotate! a-tree x)  
   (define y (node-right x))
   (set-node-right! x (node-left y))
-  (unless (eq? (node-left y) null)
+  (unless (null? (node-left y))
     (set-node-parent! (node-left y) x))
   (set-node-parent! y (node-parent x))
-  (cond [(eq? (node-parent x) null)
+  (cond [(null? (node-parent x))
          (set-tree-root! a-tree y)]
         [(eq? x (node-left (node-parent x)))
          (set-node-left! (node-parent x) y)]
@@ -61,10 +63,10 @@
 (define (right-rotate! a-tree y)
   (define x (node-left y))
   (set-node-left! y (node-right x))
-  (unless (eq? (node-right x) null)
+  (unless (null? (node-right x))
     (set-node-parent! (node-right x) y))
   (set-node-parent! x (node-parent y))
-  (cond [(eq? (node-parent y) null)
+  (cond [(null? (node-parent y))
          (set-tree-root! a-tree x)]
         [(eq? y (node-right (node-parent y)))
          (set-node-right! (node-parent y) x)]
@@ -81,13 +83,13 @@
 (define (insert-back! a-tree data width)
   (define x (node data width width null null null red))
   (cond
-    [(eq? (tree-root a-tree) null)
+    [(null? (tree-root a-tree))
      (set-tree-root! a-tree x)]
     [else
      (let loop ([p (tree-root a-tree)])
        (let ([r (node-right p)])
          (cond
-           [(eq? r null)
+           [(null? r)
             (set-node-right! p x)
             (set-node-parent! x p)]
            [else
@@ -101,13 +103,13 @@
 (define (insert-front! a-tree data width)
   (define x (node data width width null null null red))
   (cond
-    [(eq? (tree-root a-tree) null)
+    [(null? (tree-root a-tree))
      (set-tree-root! a-tree x)]
     [else
      (let loop ([p (tree-root a-tree)])
        (let ([l (node-left p)])
          (cond
-           [(eq? l null)
+           [(null? l)
             (set-node-left! p x)
             (set-node-parent! x p)]
            [else
@@ -116,6 +118,8 @@
   (fix/insert! a-tree x))
 
 
+;; update-width-to-root!: node -> void
+;; Updates the subtree width field of a-node and its ancestors.
 (define (update-width-to-root! a-node)
   (cond
     [(null? a-node)
@@ -124,10 +128,10 @@
      (define left (node-left a-node))
      (define right (node-right a-node))
      (set-node-subtree-width! a-node
-                              (+ (if (eq? null left) 
+                              (+ (if (null? left) 
                                      0
                                      (node-subtree-width left))
-                                 (if (eq? null right) 
+                                 (if (null? right) 
                                      0
                                      (node-subtree-width right))
                                  (node-self-width a-node)))
@@ -135,6 +139,7 @@
 
 
 ;; new-tree: -> tree
+;; Creates a fresh tree.
 (define (new-tree)
   (tree null))
 
@@ -144,12 +149,12 @@
 (define (fix/insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
-    (when (and (not (eq? z.p null))
+    (when (and (not (null? z.p))
                (eq? (node-color z.p) red))
       (define z.p.p (node-parent z.p))
       (cond [(eq? z.p (node-left z.p.p))
              (define y (node-right z.p.p))
-             (cond [(and (not (eq? y null))
+             (cond [(and (not (null? y))
                          (eq? (node-color y) red))
                     (set-node-color! z.p black)
                     (set-node-color! y black)
@@ -170,7 +175,7 @@
                            (loop z)])])]
             [else
              (define y (node-left z.p.p))
-             (cond [(and (not (eq? y null))
+             (cond [(and (not (null? y))
                          (eq? (node-color y) red))
                     (set-node-color! z.p black)
                     (set-node-color! y black)
@@ -193,6 +198,8 @@
 
 
 
+;; tree-items: tree -> (listof (list X number))
+;; Returns a list of all the items stored in the tree.
 (define (tree-items a-tree)
   (let loop ([node (tree-root a-tree)]
              [acc null])
@@ -206,7 +213,9 @@
                    (loop (node-right node) acc)))])))
 
 
+
 ;; tree-height: tree -> natural
+;; For debugging: returns the height of the tree.
 (define (tree-height a-tree)
   (let loop ([node (tree-root a-tree)])
     (cond
