@@ -102,8 +102,7 @@
   (define x (node data width width null null null red))
   (cond
     [(eq? (tree-root a-tree) null)
-     (set-tree-root! a-tree x)
-     (set-node-parent! x null)]
+     (set-tree-root! a-tree x)]
     [else
      (let loop ([p (tree-root a-tree)])
        (let ([l (node-left p)])
@@ -170,25 +169,25 @@
                            (right-rotate! a-tree z.p.p)
                            (loop z)])])]
             [else
-             (define y (node-left (node-parent (node-parent z))))
+             (define y (node-left z.p.p))
              (cond [(and (not (eq? y null))
                          (eq? (node-color y) red))
-                    (set-node-color! (node-parent z) black)
+                    (set-node-color! z.p black)
                     (set-node-color! y black)
-                    (set-node-color! (node-parent (node-parent z)) red)
-                    (loop (node-parent (node-parent z)))]
+                    (set-node-color! z.p.p red)
+                    (loop z.p.p)]
                    [else
-                    (cond [(eq? z (node-left (node-parent z)))
-                           (let ([z (node-parent z)])
-                             (right-rotate! a-tree z)
-                             (set-node-color! (node-parent z) black)
-                             (set-node-color! (node-parent (node-parent z)) red)
-                             (left-rotate! a-tree (node-parent (node-parent z)))
-                             (loop z))]
+                    (cond [(eq? z (node-left z.p))
+                           (let ([new-z z.p])
+                             (right-rotate! a-tree new-z)
+                             (set-node-color! (node-parent new-z) black)
+                             (set-node-color! (node-parent (node-parent new-z)) red)
+                             (left-rotate! a-tree (node-parent (node-parent new-z)))
+                             (loop new-z))]
                           [else
-                           (set-node-color! (node-parent z) black)
-                           (set-node-color! (node-parent (node-parent z)) red)
-                           (left-rotate! a-tree (node-parent (node-parent z)))
+                           (set-node-color! z.p black)
+                           (set-node-color! z.p.p red)
+                           (left-rotate! a-tree z.p.p)
                            (loop z)])])])))
   (set-node-color! (tree-root a-tree) black))
 
