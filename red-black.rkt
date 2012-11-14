@@ -129,7 +129,20 @@
               y]))]))
 
 
-
+;; computed-node-subtree-width: node -> number
+;; Assuming the node-subtree-width of the left and right are
+;; correct, computes the subtree-width of n.
+;; Note: this does not trust the local cache in (node-subtree-width n).
+(define-syntax-rule (computed-node-subtree-width n)
+  (let ([left (node-left n)]
+        [right (node-right n)])
+    (+ (if (null? left)
+           0 
+           (node-subtree-width left))
+       (node-self-width n)
+       (if (null? right)
+           0 
+           (node-subtree-width right)))))
 
 
 ;; left-rotate!: tree node natural -> void
@@ -155,13 +168,7 @@
   ;; The change to the statistics can be locally computed after the
   ;; rotation:
   (set-node-subtree-width! y (node-subtree-width x))
-  (set-node-subtree-width! x (+ (if (null? (node-left x))
-                                    0 
-                                    (node-subtree-width (node-left x)))
-                                (node-self-width x)
-                                (if (null? (node-right x))
-                                    0 
-                                    (node-subtree-width (node-right x))))))
+  (set-node-subtree-width! x (computed-node-subtree-width x)))
 
 
 ;; right-rotate!: tree node natural -> void
@@ -188,13 +195,7 @@
   ;; The change to the statistics can be locally computed after the
   ;; rotation:
   (set-node-subtree-width! x (node-subtree-width y))
-  (set-node-subtree-width! y (+ (if (null? (node-left y))
-                                    0 
-                                    (node-subtree-width (node-left y)))
-                                (node-self-width y)
-                                (if (null? (node-right y))
-                                    0 
-                                    (node-subtree-width (node-right y))))))
+  (set-node-subtree-width! y (computed-node-subtree-width y)))
 
 
 ;; insert-last!: tree data width -> void
@@ -415,16 +416,8 @@
       [(null? a-node)
        (void)]
       [else
-       (define left (node-left a-node))
-       (define right (node-right a-node))
        (set-node-subtree-width! a-node
-                                (+ (if (null? left) 
-                                       0
-                                       (node-subtree-width left))
-                                   (if (null? right) 
-                                       0
-                                       (node-subtree-width right))
-                                   (node-self-width a-node)))
+                                (computed-node-subtree-width a-node))
        (loop (node-parent a-node))])))
 
 
