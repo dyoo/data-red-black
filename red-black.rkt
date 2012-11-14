@@ -16,12 +16,17 @@
 ;; CLRS.  In our case, each node remembers the total width of the
 ;; subtree.  This allows us to perform search-by-position very
 ;; quickly.
-;; 
+;;
 ;; We also incorporate elements of the design in:
 ;;     Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
 ;; 
+;;
+;; Other minor notes: I don't use a sentinel to represent NIL; I'm using null.
+;; So there are places in the code where CLRS just assigns to an attribute,
+;; and I instead need to check it for nullness.
+
 
 (provide tree?
          tree-root
@@ -72,6 +77,61 @@
   (tree null null null))
 
 
+;; minimum: node -> node
+;; Looks for the minimum element of the tree rooted at n.
+(define (minimum n)
+  (let loop ([node n])
+    (define left (node-left n))
+    (cond
+      [(null? left)
+       node]
+      [else
+       (loop left)])))
+
+;; maximum: node -> node
+;; Looks for the maximum element of the tree rooted at n.
+(define (maximum n)
+  (let loop ([node n])
+    (define right (node-right n))
+    (cond
+      [(null? right)
+       node]
+      [else
+       (loop right)])))
+
+
+;; successor: node -> (U node null)
+;; Given a node, walks to the successor node.
+(define (successor x)
+  (cond [(not (null? (node-right x)))
+         (minimum (node-right x))]
+        [else
+         (let loop ([x x]
+                    [y (node-parent x)])
+           (cond
+             [(and (not (null? y)) (eq? x (node-right y)))
+              (loop y (node-parent y))]
+             [else
+              y]))]))
+
+;; predecessor: node -> (U node null)
+;; Given a node, walks to the predecessor node.
+(define (predecessor x)
+  (cond [(not (null? (node-left x)))
+         (maximum (node-left x))]
+        [else
+         (let loop ([x x]
+                    [y (node-parent x)])
+           (cond
+             [(and (not (null? y)) (eq? x (node-left y)))
+              (loop y (node-parent y))]
+             [else
+              y]))]))
+
+
+
+
+
 ;; left-rotate!: tree node natural -> void
 ;; INTERNAL
 ;; Rotates the x node node to the left.
@@ -90,7 +150,18 @@
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
-  (update-statistics-up-to-root! a-tree x))
+  
+  ;; Looking at Figure 1.32 of CLRS:
+  ;; The change to the statistics can be locally computed after the
+  ;; rotation:
+  (set-node-subtree-width! y (node-subtree-width x))
+  (set-node-subtree-width! x (+ (if (null? (node-left x))
+                                    0 
+                                    (node-subtree-width (node-left x)))
+                                (node-self-width x)
+                                (if (null? (node-right x))
+                                    0 
+                                    (node-subtree-width (node-right x))))))
 
 
 ;; right-rotate!: tree node natural -> void
@@ -112,7 +183,18 @@
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
-  (update-statistics-up-to-root! a-tree y))
+  
+  ;; Looking at Figure 1.32 of CLRS:
+  ;; The change to the statistics can be locally computed after the
+  ;; rotation:
+  (set-node-subtree-width! x (node-subtree-width y))
+  (set-node-subtree-width! y (+ (if (null? (node-left y))
+                                    0 
+                                    (node-subtree-width (node-left y)))
+                                (node-self-width y)
+                                (if (null? (node-right y))
+                                    0 
+                                    (node-subtree-width (node-right y))))))
 
 
 ;; insert-last!: tree data width -> void
@@ -208,21 +290,16 @@
   (set-node-color! (tree-root a-tree) black))
 
 
-;; minimum: node -> node
-;; Look for the minimum element of the tree rooted at node n.
-(define (minimum n)
-  (let loop ([node n])
-    (define left (node-left n))
-    (cond
-      [(null? left)
-       node]
-      [else
-       (loop left)])))
 
 
 ;; delete!: tree node -> void
 ;; Removes the node from the tree.
 (define (delete! a-tree z)
+  (when (eq? z (tree-first a-tree))
+    (set-tree-first! a-tree (successor z)))
+  (when (eq? z (tree-last a-tree))
+    (set-tree-last! a-tree (predecessor z)))
+  
   (define y z)
   (define y-original-color (node-color y))
   (cond
@@ -827,7 +904,7 @@
   
   
   (define all-tests
-    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     dict-words-tests
