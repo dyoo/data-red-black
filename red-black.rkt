@@ -31,7 +31,9 @@
 
 (struct tree (root  ;; (U null node)    The root node of the tree.
               first ;; (U null node)    optimization: Points to the first element.
-              last) ;; (U null node)    optimization: Points to the last element.
+              last  ;; (U null node)    optimization: Points to the last element.
+              black-height ;; natural   optimization: Records the current black height.
+              )
   #:mutable)
 
 (struct node (data          ;; Any
@@ -51,7 +53,7 @@
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
 (define (new-tree)
-  (tree null null null))
+  (tree null null null 0))
 
 
 ;; left-rotate!: tree node -> void
@@ -71,7 +73,7 @@
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
-  (update-widths-up-to-root! x))
+  (update-statistics-up-to-root! a-tree x 0))
 
 
 ;; right-rotate!: tree node -> void
@@ -92,7 +94,7 @@
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
-  (update-widths-up-to-root! y))
+  (update-statistics-up-to-root! a-tree y 0))
 
 
 ;; insert-last!: tree data width -> void
@@ -109,7 +111,7 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-widths-up-to-root! x)
+  (update-statistics-up-to-root! a-tree x 0)
   (fix-red-red-after-insert! a-tree x))
 
 
@@ -127,28 +129,37 @@
      (set-node-left! first x)
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
-  (update-widths-up-to-root! x)
+  (update-statistics-up-to-root! a-tree x 0)
   (fix-red-red-after-insert! a-tree x))
 
 
-;; update-widths-up-to-root!: node -> void
-;; Updates the subtree width field of a-node and its ancestors.
-(define (update-widths-up-to-root! a-node)
-  (cond
-    [(null? a-node)
-     (void)]
-    [else
-     (define left (node-left a-node))
-     (define right (node-right a-node))
-     (set-node-subtree-width! a-node
-                              (+ (if (null? left) 
-                                     0
-                                     (node-subtree-width left))
-                                 (if (null? right) 
-                                     0
-                                     (node-subtree-width right))
-                                 (node-self-width a-node)))
-     (update-widths-up-to-root! (node-parent a-node))]))
+;; update-statistics-up-to-root!: tree node natural? -> void
+;; Updates a few statistics.
+;;
+;; 1.  The subtree width field of a-node and its ancestors should be updated.
+;; 2.  The subtree-black-height should be the known black height of the immedidate
+;; subtree of a-node.
+(define (update-statistics-up-to-root! a-tree a-node subtree-black-height)
+  (let loop ([a-node a-node]
+             [black-height subtree-black-height])
+    (cond
+      [(null? a-node)
+       (set-tree-black-height! a-tree black-height)]
+      [else
+       (define left (node-left a-node))
+       (define right (node-right a-node))
+       (set-node-subtree-width! a-node
+                                (+ (if (null? left) 
+                                       0
+                                       (node-subtree-width left))
+                                   (if (null? right) 
+                                       0
+                                       (node-subtree-width right))
+                                   (node-self-width a-node)))
+       (loop (node-parent a-node)
+             (if (eq? black (node-color a-node))
+                 (add1 black-height)
+                 black-height))])))
 
 
 ;; search: tree natural -> (U node null)
@@ -571,8 +582,8 @@
       
       (for/fold ([offset 0]) ([word (in-list all-words)])
         (check-equal? (node-data (search t offset)) word)
-        (+ offset (string-length word)))
-      (void))
+        (+ offset (string-length word))))
+      
      
      ;; Do it backwards
      (test-begin
