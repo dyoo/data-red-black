@@ -521,7 +521,19 @@
       (delete! t (tree-root t))
       (check-equal? (tree-root t) null)
       (check-equal? (tree-first t) null)
-      (check-equal? (tree-last t) null))))
+      (check-equal? (tree-last t) null))
+     (test-case
+      "Delete the last node in a two-node tree"
+      (define t (new-tree))
+      (insert-last! t "dresden" 6)
+      (insert-last! t "files" 5)
+      (delete! t (node-right (tree-root t)))
+      (check-equal? (node-data (tree-root t)) "dresden")
+      (check-equal? (tree-first t) (tree-root t))
+      (check-equal? (tree-last t) (tree-root t))
+      (check-equal? (node-subtree-width (tree-root t)) 6)
+      (check-equal? (node-left (tree-root t)) null)
+      (check-equal? (node-right (tree-root t)) null))))
   
   
   
