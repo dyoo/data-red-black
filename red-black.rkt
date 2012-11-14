@@ -56,10 +56,10 @@
   (tree null null null 0))
 
 
-;; left-rotate!: tree node -> void
+;; left-rotate!: tree node natural -> void
 ;; Rotates the x node node to the left.
 ;; Preserves the auxiliary information for position queries.
-(define (left-rotate! a-tree x)  
+(define (left-rotate! a-tree x x-subtree-black-height)
   (define y (node-right x))
   (set-node-right! x (node-left y))
   (unless (null? (node-left y))
@@ -73,14 +73,14 @@
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
-  (update-statistics-up-to-root! a-tree x 0))
+  (update-statistics-up-to-root! a-tree x x-subtree-black-height))
 
 
-;; right-rotate!: tree node -> void
+;; right-rotate!: tree node natural -> void
 ;; Rotates the y node node to the right.
 ;; (Symmetric to the left-rotate! function.)
 ;; Preserves the auxiliary information for position queries.
-(define (right-rotate! a-tree y)
+(define (right-rotate! a-tree y y-subtree-black-height)
   (define x (node-left y))
   (set-node-left! y (node-right x))
   (unless (null? (node-right x))
@@ -94,7 +94,7 @@
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
-  (update-statistics-up-to-root! a-tree y 0))
+  (update-statistics-up-to-root! a-tree y y-subtree-black-height))
 
 
 ;; insert-last!: tree data width -> void
@@ -112,7 +112,7 @@
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
   (update-statistics-up-to-root! a-tree x 0)
-  (fix-red-red-after-insert! a-tree x))
+  (fix-red-red-after-insert! a-tree x 0))
 
 
 ;; insert-first!: tree dat width -> void
@@ -130,7 +130,7 @@
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
   (update-statistics-up-to-root! a-tree x 0)
-  (fix-red-red-after-insert! a-tree x))
+  (fix-red-red-after-insert! a-tree x 0))
 
 
 ;; update-statistics-up-to-root!: tree node natural? -> void
@@ -139,9 +139,9 @@
 ;; 1.  The subtree width field of a-node and its ancestors should be updated.
 ;; 2.  The subtree-black-height should be the known black height of the immedidate
 ;; subtree of a-node.
-(define (update-statistics-up-to-root! a-tree a-node subtree-black-height)
+(define (update-statistics-up-to-root! a-tree a-node a-node-subtree-black-height)
   (let loop ([a-node a-node]
-             [black-height subtree-black-height])
+             [black-height a-node-subtree-black-height])
     (cond
       [(null? a-node)
        (set-tree-black-height! a-tree black-height)]
@@ -197,9 +197,10 @@
 
 ;; Corrects the red/black tree property via node rotations after an
 ;; insertion.
-;; fix/insert!: node 
-(define (fix-red-red-after-insert! a-tree z)
-  (let loop ([z z])
+;; fix/insert!: tree node natural -> void
+(define (fix-red-red-after-insert! a-tree z z-subtree-black-height)
+  (let loop ([z z]
+             [z-subtree-black-height z-subtree-black-height])
     (define z.p (node-parent z))
     (when (and (not (null? z.p))
                (eq? (node-color z.p) red))
@@ -211,20 +212,20 @@
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
-                    (loop z.p.p)]
+                    (loop z.p.p z-subtree-black-height)]
                    [else
                     (cond [(eq? z (node-right z.p))
                            (let ([new-z z.p])
-                             (left-rotate! a-tree new-z)
+                             (left-rotate! a-tree new-z z-subtree-black-height)
                              (set-node-color! (node-parent new-z) black)
                              (set-node-color! (node-parent (node-parent new-z)) red)
-                             (right-rotate! a-tree (node-parent (node-parent new-z)))
-                             (loop new-z))]
+                             (right-rotate! a-tree (node-parent (node-parent new-z)) z-subtree-black-height)
+                             (loop new-z z-subtree-black-height))]
                           [else
                            (set-node-color! z.p black)
                            (set-node-color! z.p.p red)
-                           (right-rotate! a-tree z.p.p)
-                           (loop z)])])]
+                           (right-rotate! a-tree z.p.p z-subtree-black-height)
+                           (loop z z-subtree-black-height)])])]
             [else
              (define y (node-left z.p.p))
              (cond [(and (not (null? y))
@@ -232,20 +233,22 @@
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
-                    (loop z.p.p)]
+                    (loop z.p.p z-subtree-black-height)]
                    [else
                     (cond [(eq? z (node-left z.p))
                            (let ([new-z z.p])
-                             (right-rotate! a-tree new-z)
+                             (right-rotate! a-tree new-z z-subtree-black-height)
                              (set-node-color! (node-parent new-z) black)
                              (set-node-color! (node-parent (node-parent new-z)) red)
-                             (left-rotate! a-tree (node-parent (node-parent new-z)))
-                             (loop new-z))]
+                             (left-rotate! a-tree 
+                                           (node-parent (node-parent new-z))
+                                           z-subtree-black-height)
+                             (loop new-z z-subtree-black-height))]
                           [else
                            (set-node-color! z.p black)
                            (set-node-color! z.p.p red)
-                           (left-rotate! a-tree z.p.p)
-                           (loop z)])])])))
+                           (left-rotate! a-tree z.p.p z-subtree-black-height)
+                           (loop z z-subtree-black-height)])])])))
   (set-node-color! (tree-root a-tree) black))
 
 
@@ -358,16 +361,24 @@
            (error 'check-rb-structure "rb violation: not black-balanced"))
          (loop (node-left node))
          (loop (node-right node))]))
+    (define observed-black-height (node-count-black (tree-root a-tree)))
+    ;; The observed black height should equal that of the recorded one
+    #;(unless (= (tree-black-height a-tree) observed-black-height)
+      (error 'check-rb-structure
+             (format "rb violation: observed height ~a is not equal to recorded height ~a"
+                     observed-black-height (tree-black-height a-tree))))
     
-    ;; As should the overall height:
+    
+    ;; As should the overall height.
     (define count (tree-node-count a-tree))
-    (define height (tree-height a-tree))
+    (define observed-height (tree-height a-tree))
     (define (lg n) (/ (log n) (log 2)))
-    (when (> height (* 2 (lg (add1 count))))
+    (when (> observed-height (* 2 (lg (add1 count))))
       (error 'check-rb-structure 
              (format "rb violation: height ~a beyond 2 lg(~a)=~a" 
-                     height (add1 count)
+                     observed-height (add1 count)
                      (* 2 (log (add1 count)))))))
+  
   
   ;; tree->list: tree -> list
   ;; For debugging: help visualize what the structure of the tree looks like.
@@ -403,14 +414,14 @@
       (set-node-left! y x)
       (set-node-parent! x y)
       
-      (right-rotate! t y)
+      (right-rotate! t y 0)
       (check-eq? (tree-root t) x)
       (check-eq? (node-left (tree-root t)) alpha)
       (check-eq? (node-right (tree-root t)) y)
       (check-eq? (node-left (node-right (tree-root t))) beta)
       (check-eq? (node-right (node-right (tree-root t))) gamma)
       
-      (left-rotate! t x)
+      (left-rotate! t x 0)
       (check-eq? (tree-root t) y)
       (check-eq? (node-right (tree-root t)) gamma)
       (check-eq? (node-left (tree-root t)) x)
