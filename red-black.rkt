@@ -646,12 +646,18 @@
       (define t (new-tree))
       (insert-first! t "hello" 5)
       (delete! t (tree-root t))
-      (check-equal? (tree-root t) null)
+      (check-equal? (tree-root t) null))
+     
+     (test-case
+      "Deleting the last node in a tree: first and last should be null"
+      (define t (new-tree))
+      (insert-first! t "hello" 5)
+      (delete! t (tree-root t))
       (check-equal? (tree-first t) null)
       (check-equal? (tree-last t) null))
      
      (test-case
-      "Delete the last node in a two-node tree"
+      "Delete the last node in a two-node tree: basic structure"
       (define t (new-tree))
       (insert-last! t "dresden" 6)
       (insert-last! t "files" 5)
