@@ -144,13 +144,25 @@
   (void))
 
 
+;; transplant: tree node node -> void
+;; Replaces the instance of node u in a-tree with v.
+;; Warning: this is for internal use of delete! alone.
+(define (transplant! a-tree u v)
+  (define u.p (node-parent u))
+  (cond [(null? u.p)
+         (set-tree-root! a-tree v)]
+        [(eq? u (node-left u.p))
+         (set-node-left! u.p v)]
+        [else
+         (set-node-right! u.p v)])
+  (set-node-parent! v u.p))
+
+
 
 ;; update-statistics-up-to-root!: tree node natural? -> void
 ;; Updates a few statistics.
 ;;
-;; 1.  The subtree width field of a-node and its ancestors should be updated.
-;; 2.  The subtree-black-height should be the known black height of the immedidate
-;; subtree of a-node.
+;; * The subtree width field of a-node and its ancestors should be updated.
 (define (update-statistics-up-to-root! a-tree a-node)
   (let loop ([a-node a-node])
     (cond
@@ -369,9 +381,9 @@
     (define observed-black-height (node-count-black (tree-root a-tree)))
     ;; The observed black height should equal that of the recorded one
     #;(unless (= (tree-black-height a-tree) observed-black-height)
-      (error 'check-rb-structure
-             (format "rb violation: observed height ~a is not equal to recorded height ~a"
-                     observed-black-height (tree-black-height a-tree))))
+        (error 'check-rb-structure
+               (format "rb violation: observed height ~a is not equal to recorded height ~a"
+                       observed-black-height (tree-black-height a-tree))))
     
     
     ;; As should the overall height.
@@ -433,8 +445,8 @@
       (check-eq? (node-left (node-left (tree-root t))) alpha)
       (check-eq? (node-right (node-left (tree-root t))) beta))))
   
-
-
+  
+  
   (define insertion-tests
     (test-suite
      "Insertion tests"
@@ -507,7 +519,7 @@
       (check-equal? (node-color (node-right the-root)) red)
       (check-equal? (node-subtree-width the-root) 10)
       (check-rb-structure! t))))
-
+  
   
   
   
@@ -522,6 +534,7 @@
       (check-equal? (tree-root t) null)
       (check-equal? (tree-first t) null)
       (check-equal? (tree-last t) null))
+     
      (test-case
       "Delete the last node in a two-node tree"
       (define t (new-tree))
@@ -529,11 +542,26 @@
       (insert-last! t "files" 5)
       (delete! t (node-right (tree-root t)))
       (check-equal? (node-data (tree-root t)) "dresden")
-      (check-equal? (tree-first t) (tree-root t))
-      (check-equal? (tree-last t) (tree-root t))
-      (check-equal? (node-subtree-width (tree-root t)) 6)
       (check-equal? (node-left (tree-root t)) null)
-      (check-equal? (node-right (tree-root t)) null))))
+      (check-equal? (node-right (tree-root t)) null))
+     
+     (test-case
+      "Delete the last node in a two-node tree: check the subtree-width has been updated"
+      (define t (new-tree))
+      (insert-last! t "dresden" 6)
+      (insert-last! t "files" 5)
+      (delete! t (node-right (tree-root t)))
+      (check-equal? (node-subtree-width (tree-root t)) 6))
+     
+     (test-case
+      "Delete the last node in a two-node tree: check that tree-first and tree-last are correct"
+      (define t (new-tree))
+      (insert-last! t "dresden" 6)
+      (insert-last! t "files" 5)
+      (delete! t (node-right (tree-root t)))
+      (check-true (node? (tree-root t)))
+      (check-equal? (tree-first t) (tree-root t))
+      (check-equal? (tree-last t) (tree-root t)))))
   
   
   
@@ -629,7 +657,7 @@
       (for/fold ([offset 0]) ([word (in-list all-words)])
         (check-equal? (node-data (search t offset)) word)
         (+ offset (string-length word))))
-      
+     
      
      ;; Do it backwards
      (test-begin
@@ -676,9 +704,9 @@
   
   
   
-
+  
   (define all-tests
-    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     dict-words-tests
