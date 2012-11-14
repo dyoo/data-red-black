@@ -16,8 +16,8 @@
 ;; quickly.
 ;; 
 ;; We also incorporate elements of the design in:
-;;     (2005) Ron Wein.  Efficient implemenation of red-black trees with
-;;     split and catenate operations.
+;;     Ron Wein.  Efficient implemenation of red-black trees with
+;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
 ;; 
 
