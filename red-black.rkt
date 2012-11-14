@@ -138,6 +138,9 @@
 ;; delete!: tree node -> void
 ;; Removes the node from the tree.
 (define (delete! a-tree node)
+  (set-tree-root! a-tree null)
+  (set-tree-first! a-tree null)
+  (set-tree-last! a-tree null)
   (void))
 
 
