@@ -71,7 +71,7 @@
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
-  (update-width-to-root! x))
+  (update-widths-up-to-root! x))
 
 
 ;; right-rotate!: tree node -> void
@@ -92,7 +92,7 @@
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
-  (update-width-to-root! y))
+  (update-widths-up-to-root! y))
 
 
 ;; insert-last!: tree data width -> void
@@ -109,7 +109,7 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-width-to-root! x)
+  (update-widths-up-to-root! x)
   (fix-red-red-after-insert! a-tree x))
 
 
@@ -127,13 +127,13 @@
      (set-node-left! first x)
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
-  (update-width-to-root! x)
+  (update-widths-up-to-root! x)
   (fix-red-red-after-insert! a-tree x))
 
 
-;; update-width-to-root!: node -> void
+;; update-widths-up-to-root!: node -> void
 ;; Updates the subtree width field of a-node and its ancestors.
-(define (update-width-to-root! a-node)
+(define (update-widths-up-to-root! a-node)
   (cond
     [(null? a-node)
      (void)]
@@ -148,7 +148,7 @@
                                      0
                                      (node-subtree-width right))
                                  (node-self-width a-node)))
-     (update-width-to-root! (node-parent a-node))]))
+     (update-widths-up-to-root! (node-parent a-node))]))
 
 
 ;; search: tree natural -> (U node null)
