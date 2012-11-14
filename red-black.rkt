@@ -14,13 +14,19 @@
 ;; subtree.  This allows us to perform search-by-position very
 ;; quickly.
 ;; 
+;; We also incorporate elements of the design in:
+;;     (2005) Ron Wein.  Efficient implemenation of red-black trees with
+;;     split and catenate operations.
+;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
 
 
 (define red 'red)
 (define black 'black)
 
 
-(struct tree (root)  ;; node
+(struct tree (root  ;; (U null node)    The root node of the tree.
+              first ;; (U null node)    optimization: Points to the first element.
+              last) ;; (U null node)    optimization: Points to the last element.
   #:mutable)
 
 (struct node (data          ;; Any
@@ -83,16 +89,14 @@
   (define x (node data width width null null null red))
   (cond
     [(null? (tree-root a-tree))
-     (set-tree-root! a-tree x)]
+     (set-tree-root! a-tree x)
+     (set-tree-first! a-tree x)
+     (set-tree-last! a-tree x)]
     [else
-     (let loop ([p (tree-root a-tree)])
-       (let ([r (node-right p)])
-         (cond
-           [(null? r)
-            (set-node-right! p x)
-            (set-node-parent! x p)]
-           [else
-            (loop r)])))])
+     (define last (tree-last a-tree))
+     (set-node-right! last x)
+     (set-node-parent! x last)
+     (set-tree-last! a-tree x)])
   (update-width-to-root! x)
   (fix/insert! a-tree x))
 
@@ -103,16 +107,14 @@
   (define x (node data width width null null null red))
   (cond
     [(null? (tree-root a-tree))
-     (set-tree-root! a-tree x)]
+     (set-tree-root! a-tree x)
+     (set-tree-first! a-tree x)
+     (set-tree-last! a-tree x)]
     [else
-     (let loop ([p (tree-root a-tree)])
-       (let ([l (node-left p)])
-         (cond
-           [(null? l)
-            (set-node-left! p x)
-            (set-node-parent! x p)]
-           [else
-            (loop l)])))])
+     (define first (tree-first a-tree))
+     (set-node-left! first x)
+     (set-node-parent! x first)
+     (set-tree-first! a-tree x)])
   (update-width-to-root! x)
   (fix/insert! a-tree x))
 
@@ -173,9 +175,10 @@
 
 
 ;; new-tree: -> tree
-;; Creates a fresh tree.
+;; Creates a fresh tree.  The root and the first and last pointers
+;; are initially null.
 (define (new-tree)
-  (tree null))
+  (tree null null null))
 
 
 ;; Corrects the red/black tree property via node rotations after an
@@ -574,14 +577,14 @@
      ;; Do it backwards
      (test-begin
       (define t (new-tree))
-        (for ([word (in-list (reverse all-words))])
-          (insert-front! t word (string-length word)))
-        
-        (check-rb-structure! t)
-        
-        (for/fold ([offset 0]) ([word (in-list all-words)])
-          (check-equal? (node-data (search t offset)) word)
-          (+ offset (string-length word)))
+      (for ([word (in-list (reverse all-words))])
+        (insert-front! t word (string-length word)))
+      
+      (check-rb-structure! t)
+      
+      (for/fold ([offset 0]) ([word (in-list all-words)])
+        (check-equal? (node-data (search t offset)) word)
+        (+ offset (string-length word)))
       (void))))
   
   
@@ -592,27 +595,27 @@
      "Check intermediate results for tree structure"
      (test-begin
       (printf "Timing construction of /usr/share/dict/words:\n")
-        (define t (new-tree))
-        (collect-garbage)
-        (time
-         (for ([word (in-list all-words)]
-               [i (in-naturals)])
-           (when (= 1 (modulo i 10000))
-             (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-             (check-rb-structure! t))
-           (insert-back! t word (string-length word))))
-        ;; Be aware that the GC may make the following with insert-front! might make
-        ;; it look like the first time we build the tree, it's faster than the
-        ;; second time around.
-        ;; The explicit calls to collect-garbage here are just to eliminate that effect.
-        (collect-garbage)
-        (time
-         (for ([word (in-list all-words)]
-               [i (in-naturals)])
-           (when (= 1 (modulo i 10000))
-             (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-             (check-rb-structure! t))
-           (insert-front! t word (string-length word)))))))
+      (define t (new-tree))
+      (collect-garbage)
+      (time
+       (for ([word (in-list all-words)]
+             [i (in-naturals)])
+         (when (= 1 (modulo i 10000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (check-rb-structure! t))
+         (insert-back! t word (string-length word))))
+      ;; Be aware that the GC may make the following with insert-front! might make
+      ;; it look like the first time we build the tree, it's faster than the
+      ;; second time around.
+      ;; The explicit calls to collect-garbage here are just to eliminate that effect.
+      (collect-garbage)
+      (time
+       (for ([word (in-list all-words)]
+             [i (in-naturals)])
+         (when (= 1 (modulo i 10000))
+           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (check-rb-structure! t))
+         (insert-front! t word (string-length word)))))))
   
   
   
