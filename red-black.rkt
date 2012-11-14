@@ -23,7 +23,22 @@
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
 ;; 
 
-
+(provide tree?
+         tree-root
+         node?
+         node-data
+         node-self-width
+         node-subtree-width
+         node-parent
+         node-left
+         node-right
+         node-color
+         
+         new-tree
+         insert-first!
+         insert-last!
+         delete!
+         search)
 
 ;; First, our data structures:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -58,6 +73,7 @@
 
 
 ;; left-rotate!: tree node natural -> void
+;; INTERNAL
 ;; Rotates the x node node to the left.
 ;; Preserves the auxiliary information for position queries.
 (define (left-rotate! a-tree x)
@@ -78,6 +94,7 @@
 
 
 ;; right-rotate!: tree node natural -> void
+;; INTERNAL
 ;; Rotates the y node node to the right.
 ;; (Symmetric to the left-rotate! function.)
 ;; Preserves the auxiliary information for position queries.
@@ -134,89 +151,11 @@
   (fix-red-red-after-insert! a-tree x))
 
 
-
-;; delete!: tree node -> void
-;; Removes the node from the tree.
-(define (delete! a-tree node)
-  (set-tree-root! a-tree null)
-  (set-tree-first! a-tree null)
-  (set-tree-last! a-tree null)
-  (void))
-
-
-;; transplant: tree node node -> void
-;; Replaces the instance of node u in a-tree with v.
-;; Warning: this is for internal use of delete! alone.
-(define (transplant! a-tree u v)
-  (define u.p (node-parent u))
-  (cond [(null? u.p)
-         (set-tree-root! a-tree v)]
-        [(eq? u (node-left u.p))
-         (set-node-left! u.p v)]
-        [else
-         (set-node-right! u.p v)])
-  (set-node-parent! v u.p))
-
-
-
-;; update-statistics-up-to-root!: tree node natural? -> void
-;; Updates a few statistics.
-;;
-;; * The subtree width field of a-node and its ancestors should be updated.
-(define (update-statistics-up-to-root! a-tree a-node)
-  (let loop ([a-node a-node])
-    (cond
-      [(null? a-node)
-       (void)]
-      [else
-       (define left (node-left a-node))
-       (define right (node-right a-node))
-       (set-node-subtree-width! a-node
-                                (+ (if (null? left) 
-                                       0
-                                       (node-subtree-width left))
-                                   (if (null? right) 
-                                       0
-                                       (node-subtree-width right))
-                                   (node-self-width a-node)))
-       (loop (node-parent a-node))])))
-
-
-;; subtree-width: (U node null) -> natural
-;; Return the subtree width of the tree rooted at n.
-(define-syntax-rule (subtree-width n)
-  (if (null? n)
-      0
-      (node-subtree-width n)))
-
-
-;; search: tree natural -> (U node null)
-;; Search for the node closest to offset.
-;; Making the total length of the left tree at least offset, if possible.
-(define (search a-tree offset)
-  (let loop ([offset offset]
-             [a-node (tree-root a-tree)])
-    (cond
-      [(null? a-node) null]
-      [else
-       (define left (node-left a-node))
-       (define left-subtree-width (subtree-width left))
-       (cond [(< offset left-subtree-width)
-              (loop offset left)]
-             [else 
-              (define residual-offset (- offset left-subtree-width))
-              (define self-width (node-self-width a-node))
-              (cond
-                [(< residual-offset self-width)
-                 a-node]
-                [else
-                 (loop (- residual-offset self-width)
-                       (node-right a-node))])])])))
-
-
 ;; fix-red-after-insert!: tree node natural -> void
+;; INTERNAL
 ;; Corrects the red/black tree property via node rotations after an
-;; insertion.
+;; insertion.  If there's a violation, then it's at z where both z and
+;; its parent are red.
 (define (fix-red-red-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
@@ -269,20 +208,132 @@
   (set-node-color! (tree-root a-tree) black))
 
 
-
-;; tree-items: tree -> (listof (list X number))
-;; Returns a list of all the items stored in the tree.
-(define (tree-items a-tree)
-  (let loop ([node (tree-root a-tree)]
-             [acc null])
+;; minimum: node -> node
+;; Look for the minimum element of the tree rooted at node n.
+(define (minimum n)
+  (let loop ([node n])
+    (define left (node-left n))
     (cond
-      [(null? node)
-       acc]
+      [(null? left)
+       node]
       [else
-       (loop (node-left node)
-             (cons (list (node-data node)
-                         (node-self-width node))
-                   (loop (node-right node) acc)))])))
+       (loop left)])))
+
+
+;; delete!: tree node -> void
+;; Removes the node from the tree.
+(define (delete! a-tree z)
+  (define y z)
+  (define y-original-color (node-color y))
+  (cond
+    [(null? (node-left z))
+     (define x (node-right z))
+     (transplant! a-tree z (node-right z))
+     (when (eq? black y-original-color)
+       (fix-after-delete! a-tree x))]
+    [(null? (node-right z))
+     (define x (node-left z))
+     (transplant! a-tree z (node-left z))
+     (when (eq? black y-original-color)
+       (fix-after-delete! tree x))]
+    [else
+     (let* ([y (minimum (node-right z))]
+            [y-original-color (node-color y)])
+       (define x (node-right y))
+       (cond
+         [(eq? (node-parent y) z)
+          (set-node-parent! x y)]
+         [else
+          (transplant! a-tree y (node-right y))
+          (set-node-right! y (node-right z))
+          (set-node-parent! (node-right y) y)])
+       (transplant! a-tree z y)
+       (set-node-left! y (node-left z))
+       (set-node-parent! (node-left y) y)
+       (set-node-color! y (node-color z))
+       (when (eq? black y-original-color)
+         (fix-after-delete! tree x)))]))
+
+
+;; transplant: tree node (U node null) -> void
+;; INTERNAL
+;; Replaces the instance of node u in a-tree with v.
+;; Warning: this is for internal use of delete! alone.
+(define (transplant! a-tree u v)
+  (define u.p (node-parent u))
+  (cond [(null? u.p)
+         (set-tree-root! a-tree v)]
+        [(eq? u (node-left u.p))
+         (set-node-left! u.p v)]
+        [else
+         (set-node-right! u.p v)])
+  (unless (null? v)
+    (set-node-parent! v u.p)))
+
+
+;; fix-after-delete!: tree (U node null) -> void
+(define (fix-after-delete! a-tree x)
+  (void))
+
+
+
+
+
+;; update-statistics-up-to-root!: tree node natural? -> void
+;; INTERNAL
+;; Updates a few statistics.
+;;
+;; * The subtree width field of a-node and its ancestors should be updated.
+(define (update-statistics-up-to-root! a-tree a-node)
+  (let loop ([a-node a-node])
+    (cond
+      [(null? a-node)
+       (void)]
+      [else
+       (define left (node-left a-node))
+       (define right (node-right a-node))
+       (set-node-subtree-width! a-node
+                                (+ (if (null? left) 
+                                       0
+                                       (node-subtree-width left))
+                                   (if (null? right) 
+                                       0
+                                       (node-subtree-width right))
+                                   (node-self-width a-node)))
+       (loop (node-parent a-node))])))
+
+
+;; subtree-width: (U node null) -> natural
+;; INTERNAL
+;; Return the subtree width of the tree rooted at n.
+(define-syntax-rule (subtree-width n)
+  (if (null? n)
+      0
+      (node-subtree-width n)))
+
+
+;; search: tree natural -> (U node null)
+;; Search for the node closest to offset.
+;; Making the total length of the left tree at least offset, if possible.
+(define (search a-tree offset)
+  (let loop ([offset offset]
+             [a-node (tree-root a-tree)])
+    (cond
+      [(null? a-node) null]
+      [else
+       (define left (node-left a-node))
+       (define left-subtree-width (subtree-width left))
+       (cond [(< offset left-subtree-width)
+              (loop offset left)]
+             [else 
+              (define residual-offset (- offset left-subtree-width))
+              (define self-width (node-self-width a-node))
+              (cond
+                [(< residual-offset self-width)
+                 a-node]
+                [else
+                 (loop (- residual-offset self-width)
+                       (node-right a-node))])])])))
 
 
 
@@ -302,6 +353,22 @@
            rackunit/text-ui
            racket/string
            "test-data/all-words.rkt")
+  
+  
+  ;; tree-items: tree -> (listof (list X number))
+  ;; Returns a list of all the items stored in the tree.
+  (define (tree-items a-tree)
+    (let loop ([node (tree-root a-tree)]
+               [acc null])
+      (cond
+        [(null? node)
+         acc]
+        [else
+         (loop (node-left node)
+               (cons (list (node-data node)
+                           (node-self-width node))
+                     (loop (node-right node) acc)))])))
+  
   
   ;; tree-height: tree -> natural
   ;; For debugging: returns the height of the tree.
