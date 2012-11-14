@@ -7,8 +7,10 @@
 ;; The usage case of this structure is to maintain an ordered sequence
 ;; of items.  Each item has an internal length.  We want to support
 ;; quick lookup by position, as well as the catenation and splitting of sets.
-;; These operations are typical of an editor's buffer, which must maintains
-;; a sequence of tokens.
+;;
+;; These operations are typical of an editor's buffer, which must maintain
+;; a sequence of tokens in order, allowing for arbitrary search, insert, and delete
+;; into the sequence.
 ;;
 ;; We follow the basic outline for order-statistic trees described in
 ;; CLRS.  In our case, each node remembers the total width of the
@@ -31,9 +33,9 @@
 
 (struct tree (root  ;; (U null node)    The root node of the tree.
               first ;; (U null node)    optimization: Points to the first element.
-              last  ;; (U null node)    optimization: Points to the last element.
-              )
+              last) ;; (U null node)    optimization: Points to the last element.
   #:mutable)
+
 
 (struct node (data          ;; Any
               self-width    ;; Natural
@@ -130,6 +132,14 @@
      (set-tree-first! a-tree x)])
   (update-statistics-up-to-root! a-tree x)
   (fix-red-red-after-insert! a-tree x))
+
+
+
+;; delete!: tree node -> void
+;; Removes the node from the tree.
+(define (delete! a-tree node)
+  (void))
+
 
 
 ;; update-statistics-up-to-root!: tree node natural? -> void
@@ -420,7 +430,8 @@
       (check-eq? (node-left (node-left (tree-root t))) alpha)
       (check-eq? (node-right (node-left (tree-root t))) beta))))
   
-  
+
+
   (define insertion-tests
     (test-suite
      "Insertion tests"
@@ -461,7 +472,6 @@
       (check-rb-structure! t))
      
      
-     
      (test-begin 
       (define t (new-tree))
       (insert-last! t "hi" 2)
@@ -494,6 +504,21 @@
       (check-equal? (node-color (node-right the-root)) red)
       (check-equal? (node-subtree-width the-root) 10)
       (check-rb-structure! t))))
+
+  
+  
+  
+  (define deletion-tests
+    (test-suite
+     "deletion-tests"
+     (test-case
+      "Deleting the last node in a tree should set us back to the null case"
+      (define t (new-tree))
+      (insert-first! t "hello" 5)
+      (delete! t (tree-root t))
+      (check-equal? (tree-root t) null)
+      (check-equal? (tree-first t) null)
+      (check-equal? (tree-last t) null))))
   
   
   
@@ -639,8 +664,8 @@
 
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
-        (test-suite "all-tests" rotation-tests insertion-tests search-tests)
-        (test-suite "all-tests" rotation-tests insertion-tests search-tests
+        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests)
+        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
