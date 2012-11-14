@@ -56,7 +56,8 @@
 
 
 ;; right-rotate!: tree node -> void
-;; Rotates the y node node to the right.  (Symmetric to the left-rotate! function.)
+;; Rotates the y node node to the right.
+;; (Symmetric to the left-rotate! function.)
 ;; Preserves the auxiliary information for position queries.
 (define (right-rotate! a-tree y)
   (define x (node-left y))
@@ -177,7 +178,8 @@
   (tree null))
 
 
-;; Corrects the red/black tree property via node rotations after an insertion.
+;; Corrects the red/black tree property via node rotations after an
+;; insertion.
 ;; fix/insert!: node 
 (define (fix/insert! a-tree z)
   (let loop ([z z])
@@ -259,24 +261,39 @@
                  (loop (node-right node))))])))
 
 
-;; tree-node-count: tree -> natural
-;; Counts the nodes of the tree.
-(define (tree-node-count a-tree)
-  (let loop ([node (tree-root a-tree)]
-             [acc 0])
-    (cond
-      [(null? node)
-       acc]
-      [else
-       (loop (node-left node) (loop (node-right node) (add1 acc)))])))
 
 
 
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Internal tests.
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (module+ test
-  (require rackunit racket/block racket/string)
+  (require rackunit 
+           rackunit/text-ui
+           racket/string
+           "all-words.rkt")
   
-  ;; Debugging: counts the number of black nodes.
+  ;; tree-node-count: tree -> natural
+  ;; Counts the nodes of the tree.
+  (define (tree-node-count a-tree)
+    (let loop ([node (tree-root a-tree)]
+               [acc 0])
+      (cond
+        [(null? node)
+         acc]
+        [else
+         (loop (node-left node) (loop (node-right node) (add1 acc)))])))
+  
+  
+  ;; Debugging: counts the number of black nodes by manually
+  ;; traversing both subtrees.
   (define (node-count-black a-node)
     (let loop ([a-node a-node]
                [acc 0])
@@ -295,9 +312,10 @@
          right-count])))
   
   
-  ;; A heavy debugging function to ensure tree-structure is as expected.
-  ;; Note: this functions is EXTRAORDINARILY expensive.  Do not use this
-  ;; outside of tests.
+  ;; check-rb-structure!: tree -> void
+  ;; The following is a heavy debugging function to ensure
+  ;; tree-structure is as expected.  Note: this functions is
+  ;; EXTRAORDINARILY expensive.  Do not use this outside of tests.
   (define (check-rb-structure! a-tree)
     (define (color n)
       (if (null? n) black (node-color n)))
@@ -353,224 +371,255 @@
                (loop (node-right node)))])))
   
   
-  ;; checking rotations
-  (block 
-   (define t (new-tree))
-   
-   (define alpha (node "alpha" 5 5 null null null null))
-   (define beta (node "beta" 4 5 null null null null))
-   (define gamma (node "gamma" 5 5 null null null null))
-   
-   (define x (node "x" 1 1 null alpha beta null))
-   (define y (node "y" 1 1 null null gamma null))
-   (set-tree-root! t y)
-   (set-node-left! y x)
-   (set-node-parent! x y)
-   
-   (right-rotate! t y)
-   (check-eq? (tree-root t) x)
-   (check-eq? (node-left (tree-root t)) alpha)
-   (check-eq? (node-right (tree-root t)) y)
-   (check-eq? (node-left (node-right (tree-root t))) beta)
-   (check-eq? (node-right (node-right (tree-root t))) gamma)
-   
-   (left-rotate! t x)
-   (check-eq? (tree-root t) y)
-   (check-eq? (node-right (tree-root t)) gamma)
-   (check-eq? (node-left (tree-root t)) x)
-   (check-eq? (node-left (node-left (tree-root t))) alpha)
-   (check-eq? (node-right (node-left (tree-root t))) beta))
   
   
-  
-  (block (define t (new-tree))
-         (insert-back! t "foobar" 6)
-         (insert-back! t "hello" 5)
-         (insert-back! t "world" 5)
-         (check-equal? (tree-items t)
-                       '(("foobar" 6)
-                         ("hello" 5)
-                         ("world" 5)))
-         (check-rb-structure! t))
-  
-  
-  (block (define t (new-tree))
-         (insert-front! t "a" 1)
-         (insert-front! t "b" 1)
-         (insert-front! t "c" 1)
-         (check-equal? (tree-items t)
-                       '(("c" 1) ("b" 1) ("a" 1)))
-         (check-equal? (tree->list t)
-                       '("b:3:black" ("c:1:red" () ()) ("a:1:red" () ())))
-         (check-rb-structure! t))
-  
-  (block (define t (new-tree))
-         (insert-front! t "alpha" 5)
-         (insert-front! t "beta" 4)
-         (insert-front! t "gamma" 5)
-         (insert-front! t "delta" 5)
-         (insert-front! t "omega" 5)
-         (check-equal? (tree-items t)
-                       '(("omega" 5)("delta" 5)("gamma" 5) ("beta" 4) ("alpha" 5)))
-         (check-rb-structure! t))
+  (define rotation-tests
+    (test-suite 
+     "Checking left and right rotation" 
+     (test-begin
+      (define t (new-tree))
+      
+      (define alpha (node "alpha" 5 5 null null null null))
+      (define beta (node "beta" 4 5 null null null null))
+      (define gamma (node "gamma" 5 5 null null null null))
+      
+      (define x (node "x" 1 1 null alpha beta null))
+      (define y (node "y" 1 1 null null gamma null))
+      (set-tree-root! t y)
+      (set-node-left! y x)
+      (set-node-parent! x y)
+      
+      (right-rotate! t y)
+      (check-eq? (tree-root t) x)
+      (check-eq? (node-left (tree-root t)) alpha)
+      (check-eq? (node-right (tree-root t)) y)
+      (check-eq? (node-left (node-right (tree-root t))) beta)
+      (check-eq? (node-right (node-right (tree-root t))) gamma)
+      
+      (left-rotate! t x)
+      (check-eq? (tree-root t) y)
+      (check-eq? (node-right (tree-root t)) gamma)
+      (check-eq? (node-left (tree-root t)) x)
+      (check-eq? (node-left (node-left (tree-root t))) alpha)
+      (check-eq? (node-right (node-left (tree-root t))) beta))))
   
   
-  
-  (block (define t (new-tree))
-         (insert-back! t "hi" 2)
-         (insert-back! t "bye" 3)
-         (define the-root (tree-root t))
-         (check-equal? (node-left the-root)
-                       null)
-         (check-equal? (node-color the-root)
-                       black)
-         (check-equal? (node-subtree-width the-root) 5)
-         (check-equal? (node-color (node-right the-root))
-                       red)
-         (check-rb-structure! t))
-  
-  (block (define t (new-tree))
-         (insert-back! t "hi" 2)
-         (insert-back! t "bye" 3)
-         (insert-back! t "again" 5)
-         (define the-root (tree-root t))
-         (check-equal? (node-data (node-left the-root))
-                       "hi")
-         (check-equal? (node-data the-root)
-                       "bye")
-         (check-equal? (node-data (node-right the-root))
-                       "again")
-         (check-equal? (node-color the-root)
-                       black)
-         (check-equal? (node-color (node-left the-root)) red)
-         (check-equal? (node-color (node-right the-root)) red)
-         (check-equal? (node-subtree-width the-root) 10)
-         (check-rb-structure! t))
-  
-  (block (define t (new-tree))
-         (check-equal? (search t 0) null)
-         (check-equal? (search t 129348) null))
-  
-  (block (define t (new-tree))
-         (insert-back! t "hello" 5)
-         (check-equal? (node-data (search t 0)) "hello")
-         (check-equal? (node-data (search t 1)) "hello")
-         (check-equal? (node-data (search t 2)) "hello")
-         (check-equal? (node-data (search t 3)) "hello")
-         (check-equal? (node-data (search t 4)) "hello")
-         (check-equal? (search t 5) null))
-
-
-  ;; Empty nodes should get skipped over by search, though
-  ;; the nodes are still there in the tree.
-  (block (define t (new-tree))
-         (insert-back! t "hello" 5)
-         (insert-back! t "" 0)
-         (insert-back! t "" 0)
-         (insert-back! t "" 0)
-         (insert-back! t "world" 5)
-         (insert-back! t "" 0)
-         (insert-back! t "" 0)
-         (insert-back! t "" 0)
-         (insert-back! t "test!" 5)
-         (check-equal? (tree-node-count t) 9)
-         (check-equal? (node-data (search t 0)) "hello")
-         (check-equal? (node-data (search t 1)) "hello")
-         (check-equal? (node-data (search t 2)) "hello")
-         (check-equal? (node-data (search t 3)) "hello")
-         (check-equal? (node-data (search t 4)) "hello")
-         (check-equal? (node-data (search t 5)) "world")
-         (check-equal? (node-data (search t 6)) "world")
-         (check-equal? (node-data (search t 7)) "world")
-         (check-equal? (node-data (search t 8)) "world")
-         (check-equal? (node-data (search t 9)) "world")
-         (check-equal? (node-data (search t 10)) "test!"))
-
-
-  
-  
-  (block (define t (new-tree))
-         (define words (string-split "This is a test of the emergency broadcast system"))
-         (for ([word (in-list words)])
-           (insert-back! t word (string-length word)))
-         (check-equal? (node-data (search t 0)) "This")
-         (check-equal? (node-data (search t 1)) "This")
-         (check-equal? (node-data (search t 2)) "This")
-         (check-equal? (node-data (search t 3)) "This")
-         (check-equal? (node-data (search t 4)) "is")
-         (check-equal? (node-data (search t 5)) "is")
-         (check-equal? (node-data (search t 6)) "a")
-         (check-equal? (node-data (search t 7)) "test")
-         (check-equal? (node-data (search t 8)) "test")
-         (check-equal? (node-data (search t 9)) "test")
-         (check-equal? (node-data (search t 10)) "test")
-         (check-equal? (node-data (search t 11)) "of")
-         (check-equal? (node-data (search t 12)) "of")
-         (check-equal? (node-data (search t 13)) "the")
-         (check-equal? (node-data (search t 14)) "the")
-         (check-equal? (node-data (search t 15)) "the")
-         (check-equal? (node-data (search t 16)) "emergency")
-         (check-equal? (node-data (search t 25)) "broadcast")
-         (check-equal? (node-data (search t 34)) "system"))
-  
-  (block
-   (when (file-exists? "/usr/share/dict/words")
-     (define t (new-tree))
-     (define all-words (call-with-input-file "/usr/share/dict/words" 
-                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
+  (define insertion-tests
+    (test-suite
+     "Insertion tests"
+     (test-begin
+      (define t (new-tree))
+      (insert-back! t "foobar" 6)
+      (insert-back! t "hello" 5)
+      (insert-back! t "world" 5)
+      (check-equal? (tree-items t)
+                    '(("foobar" 6)
+                      ("hello" 5)
+                      ("world" 5)))
+      (check-rb-structure! t))
      
-     (for ([word (in-list all-words)])
-       (insert-back! t word (string-length word)))
      
-     (check-rb-structure! t)
+     (test-begin 
+      (define t (new-tree))
+      (insert-front! t "a" 1)
+      (insert-front! t "b" 1)
+      (insert-front! t "c" 1)
+      (check-equal? (tree-items t)
+                    '(("c" 1) ("b" 1) ("a" 1)))
+      (check-equal? (tree->list t)
+                    '("b:3:black" ("c:1:red" () ()) ("a:1:red" () ())))
+      (check-rb-structure! t))
      
-     (for/fold ([offset 0]) ([word (in-list all-words)])
-       (check-equal? (node-data (search t offset)) word)
-       (+ offset (string-length word))))
-   (void))
+     
+     (test-begin 
+      (define t (new-tree))
+      (insert-front! t "alpha" 5)
+      (insert-front! t "beta" 4)
+      (insert-front! t "gamma" 5)
+      (insert-front! t "delta" 5)
+      (insert-front! t "omega" 5)
+      (check-equal? (tree-items t)
+                    '(("omega" 5) ("delta" 5)
+                                  ("gamma" 5) ("beta" 4) ("alpha" 5)))
+      (check-rb-structure! t))
+     
+     
+     
+     (test-begin 
+      (define t (new-tree))
+      (insert-back! t "hi" 2)
+      (insert-back! t "bye" 3)
+      (define the-root (tree-root t))
+      (check-equal? (node-left the-root)
+                    null)
+      (check-equal? (node-color the-root)
+                    black)
+      (check-equal? (node-subtree-width the-root) 5)
+      (check-equal? (node-color (node-right the-root))
+                    red)
+      (check-rb-structure! t))
+     
+     (test-begin 
+      (define t (new-tree))
+      (insert-back! t "hi" 2)
+      (insert-back! t "bye" 3)
+      (insert-back! t "again" 5)
+      (define the-root (tree-root t))
+      (check-equal? (node-data (node-left the-root))
+                    "hi")
+      (check-equal? (node-data the-root)
+                    "bye")
+      (check-equal? (node-data (node-right the-root))
+                    "again")
+      (check-equal? (node-color the-root)
+                    black)
+      (check-equal? (node-color (node-left the-root)) red)
+      (check-equal? (node-color (node-right the-root)) red)
+      (check-equal? (node-subtree-width the-root) 10)
+      (check-rb-structure! t))))
   
-  ;; Do it backwards
-  (block
-   (when (file-exists? "/usr/share/dict/words")
-     (define t (new-tree))
-     (define all-words (call-with-input-file "/usr/share/dict/words" 
-                         (lambda (ip) (for/list ([line (in-lines ip)]) line))))
-     (for ([word (in-list (reverse all-words))])
-       (insert-front! t word (string-length word)))
+  
+  
+  (define search-tests
+    (test-suite 
+     "search-tests"
+     (test-begin
+      (define t (new-tree))
+      (check-equal? (search t 0) null)
+      (check-equal? (search t 129348) null))
      
-     (check-rb-structure! t)
+     (test-begin
+      (define t (new-tree))
+      (insert-back! t "hello" 5)
+      (check-equal? (node-data (search t 0)) "hello")
+      (check-equal? (node-data (search t 1)) "hello")
+      (check-equal? (node-data (search t 2)) "hello")
+      (check-equal? (node-data (search t 3)) "hello")
+      (check-equal? (node-data (search t 4)) "hello")
+      (check-equal? (search t 5) null))
      
-     (for/fold ([offset 0]) ([word (in-list all-words)])
-       (check-equal? (node-data (search t offset)) word)
-       (+ offset (string-length word))))
-   (void))
+     
+     ;; Empty nodes should get skipped over by search, though
+     ;; the nodes are still there in the tree.
+     (test-begin
+      (define t (new-tree))
+      (insert-back! t "hello" 5)
+      (insert-back! t "" 0)
+      (insert-back! t "" 0)
+      (insert-back! t "" 0)
+      (insert-back! t "world" 5)
+      (insert-back! t "" 0)
+      (insert-back! t "" 0)
+      (insert-back! t "" 0)
+      (insert-back! t "test!" 5)
+      (check-equal? (tree-node-count t) 9)
+      (check-equal? (node-data (search t 0)) "hello")
+      (check-equal? (node-data (search t 1)) "hello")
+      (check-equal? (node-data (search t 2)) "hello")
+      (check-equal? (node-data (search t 3)) "hello")
+      (check-equal? (node-data (search t 4)) "hello")
+      (check-equal? (node-data (search t 5)) "world")
+      (check-equal? (node-data (search t 6)) "world")
+      (check-equal? (node-data (search t 7)) "world")
+      (check-equal? (node-data (search t 8)) "world")
+      (check-equal? (node-data (search t 9)) "world")
+      (check-equal? (node-data (search t 10)) "test!"))
+     
+     
+     
+     
+     (test-begin
+      (define t (new-tree))
+      (define words (string-split "This is a test of the emergency broadcast system"))
+      (for ([word (in-list words)])
+        (insert-back! t word (string-length word)))
+      (check-equal? (node-data (search t 0)) "This")
+      (check-equal? (node-data (search t 1)) "This")
+      (check-equal? (node-data (search t 2)) "This")
+      (check-equal? (node-data (search t 3)) "This")
+      (check-equal? (node-data (search t 4)) "is")
+      (check-equal? (node-data (search t 5)) "is")
+      (check-equal? (node-data (search t 6)) "a")
+      (check-equal? (node-data (search t 7)) "test")
+      (check-equal? (node-data (search t 8)) "test")
+      (check-equal? (node-data (search t 9)) "test")
+      (check-equal? (node-data (search t 10)) "test")
+      (check-equal? (node-data (search t 11)) "of")
+      (check-equal? (node-data (search t 12)) "of")
+      (check-equal? (node-data (search t 13)) "the")
+      (check-equal? (node-data (search t 14)) "the")
+      (check-equal? (node-data (search t 15)) "the")
+      (check-equal? (node-data (search t 16)) "emergency")
+      (check-equal? (node-data (search t 25)) "broadcast")
+      (check-equal? (node-data (search t 34)) "system"))))
+  
+  
+  
+  (define dict-words-tests
+    (test-suite
+     "Working with a lot of words.  Insert and search tests."
+     (test-begin
+      (define t (new-tree))
+      
+      (for ([word (in-list all-words)])
+        (insert-back! t word (string-length word)))
+      
+      (check-rb-structure! t)
+      
+      (for/fold ([offset 0]) ([word (in-list all-words)])
+        (check-equal? (node-data (search t offset)) word)
+        (+ offset (string-length word)))
+      (void))
+     
+     ;; Do it backwards
+     (test-begin
+      (define t (new-tree))
+        (for ([word (in-list (reverse all-words))])
+          (insert-front! t word (string-length word)))
+        
+        (check-rb-structure! t)
+        
+        (for/fold ([offset 0]) ([word (in-list all-words)])
+          (check-equal? (node-data (search t offset)) word)
+          (+ offset (string-length word)))
+      (void))))
   
   
   
   ;; Stress test
-  (define (stress-test)
-    (when (file-exists? "/usr/share/dict/words")
+  (define exhaustive-structure-test
+    (test-suite
+     "Check intermediate results for tree structure"
+     (test-begin
       (printf "Timing construction of /usr/share/dict/words:\n")
-      (define t (new-tree))
-      (define all-words (call-with-input-file "/usr/share/dict/words" 
-                          (lambda (ip) (for/list ([line (in-lines ip)]) line))))
-      (collect-garbage)
-      (time
-       (for ([word (in-list all-words)]
-             [i (in-naturals)])
-         (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-           (check-rb-structure! t))
-         (insert-back! t word (string-length word))))
-      ;; Be aware that the GC may make the following with insert-front! might make
-      ;; it look like the first time we build the tree, it's faster than the
-      ;; second time around.
-      ;; The explicit calls to collect-garbage here are just to eliminate that effect.
-      (collect-garbage)
-      (time
-       (for ([word (in-list all-words)]
-             [i (in-naturals)])
-         (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-           (check-rb-structure! t))
-         (insert-front! t word (string-length word)))))))
+        (define t (new-tree))
+        (collect-garbage)
+        (time
+         (for ([word (in-list all-words)]
+               [i (in-naturals)])
+           (when (= 1 (modulo i 10000))
+             (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+             (check-rb-structure! t))
+           (insert-back! t word (string-length word))))
+        ;; Be aware that the GC may make the following with insert-front! might make
+        ;; it look like the first time we build the tree, it's faster than the
+        ;; second time around.
+        ;; The explicit calls to collect-garbage here are just to eliminate that effect.
+        (collect-garbage)
+        (time
+         (for ([word (in-list all-words)]
+               [i (in-naturals)])
+           (when (= 1 (modulo i 10000))
+             (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+             (check-rb-structure! t))
+           (insert-front! t word (string-length word)))))))
+  
+  
+  
+  (define all-tests
+    (test-suite "all-tests" rotation-tests insertion-tests search-tests
+                dict-words-tests exhaustive-structure-test))
+  
+  
+  (void
+   (run-tests all-tests)))
