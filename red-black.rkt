@@ -273,9 +273,57 @@
 
 ;; fix-after-delete!: tree (U node null) -> void
 (define (fix-after-delete! a-tree x)
-  (void))
-
-
+  (let loop ()
+    (when (and (not (eq? x (tree-root a-tree)))
+               (eq? (node-color x) black))
+      (cond
+        [(eq? x (node-left (node-parent x)))
+         (define w (node-right (node-parent x)))
+         (when (eq? (node-color w) red)
+           (set-node-color! w black)
+           (set-node-color! (node-parent x) red)
+           (left-rotate! a-tree (node-parent x))
+           (set! w (node-right (node-parent x))))
+         (cond [(and (eq? (node-color (node-left w)) black)
+                     (eq? (node-color (node-right w)) black))
+                (set-node-color! w red)
+                (set! x (node-parent x))]
+               [else
+                (when (eq? (node-color (node-right w)) black)
+                  (set-node-color! (node-left w) black)
+                  (set-node-color! w red)
+                  (right-rotate! a-tree w)
+                  (set! w (node-right (node-parent x))))
+                (set-node-color! w (node-color (node-parent x)))
+                (set-node-color! (node-parent x) black)
+                (set-node-color! (node-right w) black)
+                (left-rotate! a-tree (node-parent x))
+                (set! x (tree-root a-tree))])]
+        [else
+         (define w (node-left (node-parent x)))
+         (when (eq? (node-color w) red)
+           (set-node-color! w black)
+           (set-node-color! (node-parent x) red)
+           (right-rotate! a-tree (node-parent x))
+           (set! w (node-left (node-parent x))))
+         (cond [(and (eq? (node-color (node-left w)) black)
+                     (eq? (node-color (node-right w)) black))
+                (set-node-color! w red)
+                (set! x (node-parent x))]
+               [else
+                (when (eq? (node-color (node-left w)) black)
+                  (set-node-color! (node-right w) black)
+                  (set-node-color! w red)
+                  (left-rotate! a-tree w)
+                  (set! w (node-left (node-parent x))))
+                (set-node-color! w (node-color (node-parent x)))
+                (set-node-color! (node-parent x) black)
+                (set-node-color! (node-left w) black)
+                (right-rotate! a-tree (node-parent x))
+                (set! x (tree-root a-tree))])])
+      (loop)))
+  (unless (null? x)
+    (set-node-color! x black)))
 
 
 
