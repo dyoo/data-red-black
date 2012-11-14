@@ -157,15 +157,18 @@
        (loop (node-parent a-node))])))
 
 
+;; subtree-width: (U node null) -> natural
+;; Return the subtree width of the tree rooted at n.
+(define-syntax-rule (subtree-width n)
+  (if (null? n)
+      0
+      (node-subtree-width n)))
+
+
 ;; search: tree natural -> (U node null)
 ;; Search for the node closest to offset.
 ;; Making the total length of the left tree at least offset, if possible.
 (define (search a-tree offset)
-  (define-syntax-rule (subtree-width n)
-    (if (null? n)
-        0
-        (node-subtree-width n)))
-  
   (let loop ([offset offset]
              [a-node (tree-root a-tree)])
     (cond
@@ -174,11 +177,7 @@
        (define left (node-left a-node))
        (define left-subtree-width (subtree-width left))
        (cond [(< offset left-subtree-width)
-              (cond
-                [(null? left)
-                 a-node]
-                [else
-                 (loop offset left)])]
+              (loop offset left)]
              [else 
               (define residual-offset (- offset left-subtree-width))
               (define self-width (node-self-width a-node))
@@ -514,7 +513,10 @@
       (check-equal? (node-data (search t 2)) "hello")
       (check-equal? (node-data (search t 3)) "hello")
       (check-equal? (node-data (search t 4)) "hello")
-      (check-equal? (search t 5) null))
+      ;; Edge case:
+      (check-equal? (search t 5) null)
+      ;; Edge case:
+      (check-equal? (search t -1) null))
      
      
      ;; Empty nodes should get skipped over by search, though
