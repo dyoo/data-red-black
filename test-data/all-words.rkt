@@ -10,7 +10,7 @@
 (define all-words
   (let ()
     (define-values (in out) (make-pipe))
-    (thread (lambda () (call-with-input-file "words.gz" 
+    (thread (lambda () (call-with-input-file words.gz
                          (lambda (fin) 
                            (gunzip-through-ports fin out)
                            (close-output-port out)))))

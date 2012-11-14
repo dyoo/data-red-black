@@ -2,12 +2,13 @@
 (require (for-syntax racket/base))
 
 ;; Implementation of an augmented red-black tree, where extra
-;; information supports position-based queries, as used in
-;; tokenization.
-;;
-;; The elements in the tree are intended to be tokens with a
-;; particular width; we wish to make it easy to represent a sequence
-;; of tokens, and also insert at the front and back.
+;; information supports position-based queries.
+;; 
+;; The usage case of this structure is to maintain an ordered sequence
+;; of items.  Each item has an internal length.  We want to support
+;; quick lookup by position, as well as the catenation and splitting of sets.
+;; These operations are typical of an editor's buffer, which must maintains
+;; a sequence of tokens.
 ;;
 ;; We follow the basic outline for order-statistic trees described in
 ;; CLRS.  In our case, each node remembers the total width of the
@@ -18,8 +19,12 @@
 ;;     (2005) Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
+;; 
 
 
+
+;; First, our data structures:
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define red 'red)
 (define black 'black)
 
@@ -37,8 +42,16 @@
               right      ;; (U Node null)
               color)     ;; (U red black)
   #:mutable)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
+;; Next, the operations:
+
+
+;; new-tree: -> tree
+;; Creates a fresh tree.
+(define (new-tree)
+  (tree null null null))
 
 
 ;; left-rotate!: tree node -> void
@@ -82,10 +95,9 @@
   (update-width-to-root! y))
 
 
-
-;; insert-back!: tree data width -> void
-;; Insert at the back of the tree.
-(define (insert-back! a-tree data width)
+;; insert-last!: tree data width -> void
+;; Insert after the last element in the tree.
+(define (insert-last! a-tree data width)
   (define x (node data width width null null null red))
   (cond
     [(null? (tree-root a-tree))
@@ -98,12 +110,12 @@
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
   (update-width-to-root! x)
-  (fix/insert! a-tree x))
+  (fix-red-red-after-insert! a-tree x))
 
 
-;; insert-front!: tree dat width -> void
-;; Insert at the front of the tree.
-(define (insert-front! a-tree data width)
+;; insert-first!: tree dat width -> void
+;; Insert before the first element of the tree.
+(define (insert-first! a-tree data width)
   (define x (node data width width null null null red))
   (cond
     [(null? (tree-root a-tree))
@@ -116,7 +128,7 @@
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
   (update-width-to-root! x)
-  (fix/insert! a-tree x))
+  (fix-red-red-after-insert! a-tree x))
 
 
 ;; update-width-to-root!: node -> void
@@ -172,19 +184,10 @@
                        (node-right a-node))])])])))
 
 
-
-
-;; new-tree: -> tree
-;; Creates a fresh tree.  The root and the first and last pointers
-;; are initially null.
-(define (new-tree)
-  (tree null null null))
-
-
 ;; Corrects the red/black tree property via node rotations after an
 ;; insertion.
 ;; fix/insert!: node 
-(define (fix/insert! a-tree z)
+(define (fix-red-red-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
     (when (and (not (null? z.p))
@@ -252,20 +255,6 @@
 
 
 
-;; tree-height: tree -> natural
-;; For debugging: returns the height of the tree.
-(define (tree-height a-tree)
-  (let loop ([node (tree-root a-tree)])
-    (cond
-      [(null? node)
-       0]
-      [else
-       (+ 1 (max (loop (node-left node))
-                 (loop (node-right node))))])))
-
-
-
-
 
 
 
@@ -281,7 +270,18 @@
   (require rackunit 
            rackunit/text-ui
            racket/string
-           "all-words.rkt")
+           "test-data/all-words.rkt")
+  
+  ;; tree-height: tree -> natural
+  ;; For debugging: returns the height of the tree.
+  (define (tree-height a-tree)
+    (let loop ([node (tree-root a-tree)])
+      (cond
+        [(null? node)
+         0]
+        [else
+         (+ 1 (max (loop (node-left node))
+                   (loop (node-right node))))])))
   
   ;; tree-node-count: tree -> natural
   ;; Counts the nodes of the tree.
@@ -412,9 +412,9 @@
      "Insertion tests"
      (test-begin
       (define t (new-tree))
-      (insert-back! t "foobar" 6)
-      (insert-back! t "hello" 5)
-      (insert-back! t "world" 5)
+      (insert-last! t "foobar" 6)
+      (insert-last! t "hello" 5)
+      (insert-last! t "world" 5)
       (check-equal? (tree-items t)
                     '(("foobar" 6)
                       ("hello" 5)
@@ -424,9 +424,9 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-front! t "a" 1)
-      (insert-front! t "b" 1)
-      (insert-front! t "c" 1)
+      (insert-first! t "a" 1)
+      (insert-first! t "b" 1)
+      (insert-first! t "c" 1)
       (check-equal? (tree-items t)
                     '(("c" 1) ("b" 1) ("a" 1)))
       (check-equal? (tree->list t)
@@ -436,11 +436,11 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-front! t "alpha" 5)
-      (insert-front! t "beta" 4)
-      (insert-front! t "gamma" 5)
-      (insert-front! t "delta" 5)
-      (insert-front! t "omega" 5)
+      (insert-first! t "alpha" 5)
+      (insert-first! t "beta" 4)
+      (insert-first! t "gamma" 5)
+      (insert-first! t "delta" 5)
+      (insert-first! t "omega" 5)
       (check-equal? (tree-items t)
                     '(("omega" 5) ("delta" 5)
                                   ("gamma" 5) ("beta" 4) ("alpha" 5)))
@@ -450,8 +450,8 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-back! t "hi" 2)
-      (insert-back! t "bye" 3)
+      (insert-last! t "hi" 2)
+      (insert-last! t "bye" 3)
       (define the-root (tree-root t))
       (check-equal? (node-left the-root)
                     null)
@@ -464,9 +464,9 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-back! t "hi" 2)
-      (insert-back! t "bye" 3)
-      (insert-back! t "again" 5)
+      (insert-last! t "hi" 2)
+      (insert-last! t "bye" 3)
+      (insert-last! t "again" 5)
       (define the-root (tree-root t))
       (check-equal? (node-data (node-left the-root))
                     "hi")
@@ -493,7 +493,7 @@
      
      (test-begin
       (define t (new-tree))
-      (insert-back! t "hello" 5)
+      (insert-last! t "hello" 5)
       (check-equal? (node-data (search t 0)) "hello")
       (check-equal? (node-data (search t 1)) "hello")
       (check-equal? (node-data (search t 2)) "hello")
@@ -506,15 +506,15 @@
      ;; the nodes are still there in the tree.
      (test-begin
       (define t (new-tree))
-      (insert-back! t "hello" 5)
-      (insert-back! t "" 0)
-      (insert-back! t "" 0)
-      (insert-back! t "" 0)
-      (insert-back! t "world" 5)
-      (insert-back! t "" 0)
-      (insert-back! t "" 0)
-      (insert-back! t "" 0)
-      (insert-back! t "test!" 5)
+      (insert-last! t "hello" 5)
+      (insert-last! t "" 0)
+      (insert-last! t "" 0)
+      (insert-last! t "" 0)
+      (insert-last! t "world" 5)
+      (insert-last! t "" 0)
+      (insert-last! t "" 0)
+      (insert-last! t "" 0)
+      (insert-last! t "test!" 5)
       (check-equal? (tree-node-count t) 9)
       (check-equal? (node-data (search t 0)) "hello")
       (check-equal? (node-data (search t 1)) "hello")
@@ -535,7 +535,7 @@
       (define t (new-tree))
       (define words (string-split "This is a test of the emergency broadcast system"))
       (for ([word (in-list words)])
-        (insert-back! t word (string-length word)))
+        (insert-last! t word (string-length word)))
       (check-equal? (node-data (search t 0)) "This")
       (check-equal? (node-data (search t 1)) "This")
       (check-equal? (node-data (search t 2)) "This")
@@ -565,7 +565,7 @@
       (define t (new-tree))
       
       (for ([word (in-list all-words)])
-        (insert-back! t word (string-length word)))
+        (insert-last! t word (string-length word)))
       
       (check-rb-structure! t)
       
@@ -578,7 +578,7 @@
      (test-begin
       (define t (new-tree))
       (for ([word (in-list (reverse all-words))])
-        (insert-front! t word (string-length word)))
+        (insert-first! t word (string-length word)))
       
       (check-rb-structure! t)
       
@@ -603,7 +603,7 @@
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
            (check-rb-structure! t))
-         (insert-back! t word (string-length word))))
+         (insert-last! t word (string-length word))))
       ;; Be aware that the GC may make the following with insert-front! might make
       ;; it look like the first time we build the tree, it's faster than the
       ;; second time around.
@@ -615,7 +615,7 @@
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
            (check-rb-structure! t))
-         (insert-front! t word (string-length word)))))))
+         (insert-first! t word (string-length word)))))))
   
   
   
