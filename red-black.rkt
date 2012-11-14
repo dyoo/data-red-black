@@ -189,9 +189,9 @@
                        (node-right a-node))])])])))
 
 
+;; fix-red-after-insert!: tree node natural -> void
 ;; Corrects the red/black tree property via node rotations after an
 ;; insertion.
-;; fix/insert!: tree node natural -> void
 (define (fix-red-red-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
@@ -223,16 +223,16 @@
              (define y (node-left z.p.p))
              (cond [(and (not (null? y))
                          (eq? (node-color y) red))
-                    (set-node-color! z.p black)
-                    (set-node-color! y black)
-                    (set-node-color! z.p.p red)
+                    (set-node-color! z.p black) ; fixme: write test to verify this
+                    (set-node-color! y black)   ; fixme: write test to verify this
+                    (set-node-color! z.p.p red) ; fixme: write test to verify this
                     (loop z.p.p)]
                    [else
                     (cond [(eq? z (node-left z.p))
                            (let ([new-z z.p])
                              (right-rotate! a-tree new-z)
-                             (set-node-color! (node-parent new-z) black)
-                             (set-node-color! (node-parent (node-parent new-z)) red)
+                             (set-node-color! (node-parent new-z) black) ; fixme: write test to verify this
+                             (set-node-color! (node-parent (node-parent new-z)) red) ; fixme: write test to verify this
                              (left-rotate! a-tree 
                                            (node-parent (node-parent new-z)))
                              (loop new-z))]
@@ -636,10 +636,12 @@
   
   
   
+
   (define all-tests
-    (test-suite "all-tests" rotation-tests insertion-tests search-tests
-                dict-words-tests exhaustive-structure-test))
-  
-  
+    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
+        (test-suite "all-tests" rotation-tests insertion-tests search-tests)
+        (test-suite "all-tests" rotation-tests insertion-tests search-tests
+                    dict-words-tests
+                    exhaustive-structure-test)))
   (void
    (run-tests all-tests)))
