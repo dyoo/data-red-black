@@ -296,6 +296,8 @@
 ;; delete!: tree node -> void
 ;; Removes the node from the tree.
 (define (delete! a-tree z)
+  ;; First, adjust tree-first and tree-last if we end up
+  ;; removing either from the tree.
   (when (eq? z (tree-first a-tree))
     (set-tree-first! a-tree (successor z)))
   (when (eq? z (tree-last a-tree))
@@ -307,11 +309,13 @@
     [(null? (node-left z))
      (define x (node-right z))
      (transplant! a-tree z (node-right z))
+     (update-statistics-up-to-root! a-tree y)
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
     [(null? (node-right z))
      (define x (node-left z))
      (transplant! a-tree z (node-left z))
+     (update-statistics-up-to-root! a-tree y)
      (when (eq? black y-original-color)
        (fix-after-delete! tree x))]
     [else
@@ -329,6 +333,7 @@
        (set-node-left! y (node-left z))
        (set-node-parent! (node-left y) y)
        (set-node-color! y (node-color z))
+       (update-statistics-up-to-root! a-tree y)
        (when (eq? black y-original-color)
          (fix-after-delete! tree x)))]))
 
@@ -416,8 +421,7 @@
       [(null? a-node)
        (void)]
       [else
-       (set-node-subtree-width! a-node
-                                (computed-node-subtree-width a-node))
+       (set-node-subtree-width! a-node (computed-node-subtree-width a-node))
        (loop (node-parent a-node))])))
 
 
