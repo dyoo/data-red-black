@@ -32,7 +32,6 @@
 (struct tree (root  ;; (U null node)    The root node of the tree.
               first ;; (U null node)    optimization: Points to the first element.
               last  ;; (U null node)    optimization: Points to the last element.
-              black-height ;; natural   optimization: Records the current black height.
               )
   #:mutable)
 
@@ -53,13 +52,13 @@
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
 (define (new-tree)
-  (tree null null null 0))
+  (tree null null null))
 
 
 ;; left-rotate!: tree node natural -> void
 ;; Rotates the x node node to the left.
 ;; Preserves the auxiliary information for position queries.
-(define (left-rotate! a-tree x x-subtree-black-height)
+(define (left-rotate! a-tree x)
   (define y (node-right x))
   (set-node-right! x (node-left y))
   (unless (null? (node-left y))
@@ -73,14 +72,14 @@
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
   (set-node-parent! x y)
-  (update-statistics-up-to-root! a-tree x x-subtree-black-height))
+  (update-statistics-up-to-root! a-tree x))
 
 
 ;; right-rotate!: tree node natural -> void
 ;; Rotates the y node node to the right.
 ;; (Symmetric to the left-rotate! function.)
 ;; Preserves the auxiliary information for position queries.
-(define (right-rotate! a-tree y y-subtree-black-height)
+(define (right-rotate! a-tree y)
   (define x (node-left y))
   (set-node-left! y (node-right x))
   (unless (null? (node-right x))
@@ -94,7 +93,7 @@
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
   (set-node-parent! y x)
-  (update-statistics-up-to-root! a-tree y y-subtree-black-height))
+  (update-statistics-up-to-root! a-tree y))
 
 
 ;; insert-last!: tree data width -> void
@@ -111,8 +110,8 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-statistics-up-to-root! a-tree x 0)
-  (fix-red-red-after-insert! a-tree x 0))
+  (update-statistics-up-to-root! a-tree x)
+  (fix-red-red-after-insert! a-tree x))
 
 
 ;; insert-first!: tree dat width -> void
@@ -129,8 +128,8 @@
      (set-node-left! first x)
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
-  (update-statistics-up-to-root! a-tree x 0)
-  (fix-red-red-after-insert! a-tree x 0))
+  (update-statistics-up-to-root! a-tree x)
+  (fix-red-red-after-insert! a-tree x))
 
 
 ;; update-statistics-up-to-root!: tree node natural? -> void
@@ -139,12 +138,11 @@
 ;; 1.  The subtree width field of a-node and its ancestors should be updated.
 ;; 2.  The subtree-black-height should be the known black height of the immedidate
 ;; subtree of a-node.
-(define (update-statistics-up-to-root! a-tree a-node a-node-subtree-black-height)
-  (let loop ([a-node a-node]
-             [black-height a-node-subtree-black-height])
+(define (update-statistics-up-to-root! a-tree a-node)
+  (let loop ([a-node a-node])
     (cond
       [(null? a-node)
-       (set-tree-black-height! a-tree black-height)]
+       (void)]
       [else
        (define left (node-left a-node))
        (define right (node-right a-node))
@@ -156,10 +154,7 @@
                                        0
                                        (node-subtree-width right))
                                    (node-self-width a-node)))
-       (loop (node-parent a-node)
-             (if (eq? black (node-color a-node))
-                 (add1 black-height)
-                 black-height))])))
+       (loop (node-parent a-node))])))
 
 
 ;; search: tree natural -> (U node null)
@@ -198,9 +193,8 @@
 ;; Corrects the red/black tree property via node rotations after an
 ;; insertion.
 ;; fix/insert!: tree node natural -> void
-(define (fix-red-red-after-insert! a-tree z z-subtree-black-height)
-  (let loop ([z z]
-             [z-subtree-black-height z-subtree-black-height])
+(define (fix-red-red-after-insert! a-tree z)
+  (let loop ([z z])
     (define z.p (node-parent z))
     (when (and (not (null? z.p))
                (eq? (node-color z.p) red))
@@ -212,20 +206,20 @@
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
-                    (loop z.p.p z-subtree-black-height)]
+                    (loop z.p.p)]
                    [else
                     (cond [(eq? z (node-right z.p))
                            (let ([new-z z.p])
-                             (left-rotate! a-tree new-z z-subtree-black-height)
+                             (left-rotate! a-tree new-z)
                              (set-node-color! (node-parent new-z) black)
                              (set-node-color! (node-parent (node-parent new-z)) red)
-                             (right-rotate! a-tree (node-parent (node-parent new-z)) z-subtree-black-height)
-                             (loop new-z z-subtree-black-height))]
+                             (right-rotate! a-tree (node-parent (node-parent new-z)))
+                             (loop new-z))]
                           [else
                            (set-node-color! z.p black)
                            (set-node-color! z.p.p red)
-                           (right-rotate! a-tree z.p.p z-subtree-black-height)
-                           (loop z z-subtree-black-height)])])]
+                           (right-rotate! a-tree z.p.p)
+                           (loop z)])])]
             [else
              (define y (node-left z.p.p))
              (cond [(and (not (null? y))
@@ -233,22 +227,21 @@
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
-                    (loop z.p.p z-subtree-black-height)]
+                    (loop z.p.p)]
                    [else
                     (cond [(eq? z (node-left z.p))
                            (let ([new-z z.p])
-                             (right-rotate! a-tree new-z z-subtree-black-height)
+                             (right-rotate! a-tree new-z)
                              (set-node-color! (node-parent new-z) black)
                              (set-node-color! (node-parent (node-parent new-z)) red)
                              (left-rotate! a-tree 
-                                           (node-parent (node-parent new-z))
-                                           z-subtree-black-height)
-                             (loop new-z z-subtree-black-height))]
+                                           (node-parent (node-parent new-z)))
+                             (loop new-z))]
                           [else
                            (set-node-color! z.p black)
                            (set-node-color! z.p.p red)
-                           (left-rotate! a-tree z.p.p z-subtree-black-height)
-                           (loop z z-subtree-black-height)])])])))
+                           (left-rotate! a-tree z.p.p)
+                           (loop z)])])])))
   (set-node-color! (tree-root a-tree) black))
 
 
@@ -414,14 +407,14 @@
       (set-node-left! y x)
       (set-node-parent! x y)
       
-      (right-rotate! t y 0)
+      (right-rotate! t y)
       (check-eq? (tree-root t) x)
       (check-eq? (node-left (tree-root t)) alpha)
       (check-eq? (node-right (tree-root t)) y)
       (check-eq? (node-left (node-right (tree-root t))) beta)
       (check-eq? (node-right (node-right (tree-root t))) gamma)
       
-      (left-rotate! t x 0)
+      (left-rotate! t x)
       (check-eq? (tree-root t) y)
       (check-eq? (node-right (tree-root t)) gamma)
       (check-eq? (node-left (tree-root t)) x)
