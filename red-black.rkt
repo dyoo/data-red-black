@@ -325,9 +325,10 @@
      ;; Finally, repair the rb tree damage: we have reduced the
      ;; black height so it's off by one at z.p, and potentially
      ;; introduced a red-red link.
+     ;; (If x is null, then what?!)
      (when (eq? black y-original-color)
-       (fix-after-delete! a-tree x))]
-
+       (fix-after-delete! a-tree x z.p))]
+    
     ;; This case is symmetric with the previous case.
     [(null? (node-right z))
      (define z.p (node-parent z))
@@ -336,22 +337,24 @@
      (when (not (null? z.p))
        (update-statistics-up-to-root! a-tree z.p))
      (when (eq? black y-original-color)
-       (fix-after-delete! a-tree x))]
-
-     ;; The hardest case is when z has non-null left and right.
-     ;; We take the minimum of z's right subtree and replace
-     ;; z with it.
+       (fix-after-delete! a-tree x z.p))]
+    
+    ;; The hardest case is when z has non-null left and right.
+    ;; We take the minimum of z's right subtree and replace
+    ;; z with it.
     [else
      (let* ([y (minimum (node-right z))]
             [y-original-color (node-color y)])
        ;; At this point, y's left is null by definition of minimum.
+       (define y.p (node-parent y))
        (define x (node-right y))
        (cond
-         [(eq? (node-parent y) z)
+         [(eq? y.p z)
           ;; In CLRS, this is steps 12 and 13 of RB-DELETE.  However,
-          ;; the assignment "x.p = y" is a no-op!
+          ;; the assignment "x.p = y" is always no-op when we don't use
+          ;; the sentinel NIL node that CLRS uses.
           ;; By definition, x is already y's child, so setting
-          ;; the parent pointer does nothing.
+          ;; the parent pointer should do nothing.
           (void)]
          [else
           (transplant! a-tree y (node-right y))
@@ -365,7 +368,7 @@
        (set-node-color! y (node-color z))
        (update-statistics-up-to-root! a-tree y)
        (when (eq? black y-original-color)
-         (fix-after-delete! a-tree x)))]))
+         (fix-after-delete! a-tree x y.p)))]))
 
 
 ;; transplant: tree node (U node null) -> void
@@ -383,60 +386,72 @@
     (set-node-parent! v u.p)))
 
 
-;; fix-after-delete!: tree (U node null) -> void
-(define (fix-after-delete! a-tree x)
-  (let loop ()
-    (when (and (not (eq? x (tree-root a-tree)))
-               (eq? (node-color x) black))
-      (cond
-        [(eq? x (node-left (node-parent x)))
-         (define w (node-right (node-parent x)))
-         (when (eq? (node-color w) red)
-           (set-node-color! w black)
-           (set-node-color! (node-parent x) red)
-           (left-rotate! a-tree (node-parent x))
-           (set! w (node-right (node-parent x))))
-         (cond [(and (eq? (node-color (node-left w)) black)
-                     (eq? (node-color (node-right w)) black))
-                (set-node-color! w red)
-                (set! x (node-parent x))]
-               [else
-                (when (eq? (node-color (node-right w)) black)
-                  (set-node-color! (node-left w) black)
-                  (set-node-color! w red)
-                  (right-rotate! a-tree w)
-                  (set! w (node-right (node-parent x))))
-                (set-node-color! w (node-color (node-parent x)))
-                (set-node-color! (node-parent x) black)
-                (set-node-color! (node-right w) black)
-                (left-rotate! a-tree (node-parent x))
-                (set! x (tree-root a-tree))])]
-        [else
-         (define w (node-left (node-parent x)))
-         (when (eq? (node-color w) red)
-           (set-node-color! w black)
-           (set-node-color! (node-parent x) red)
-           (right-rotate! a-tree (node-parent x))
-           (set! w (node-left (node-parent x))))
-         (cond [(and (eq? (node-color (node-left w)) black)
-                     (eq? (node-color (node-right w)) black))
-                (set-node-color! w red)
-                (set! x (node-parent x))]
-               [else
-                (when (eq? (node-color (node-left w)) black)
-                  (set-node-color! (node-right w) black)
-                  (set-node-color! w red)
-                  (left-rotate! a-tree w)
-                  (set! w (node-left (node-parent x))))
-                (set-node-color! w (node-color (node-parent x)))
-                (set-node-color! (node-parent x) black)
-                (set-node-color! (node-left w) black)
-                (right-rotate! a-tree (node-parent x))
-                (set! x (tree-root a-tree))])])
-      (loop)))
-  (unless (null? x)
-    (set-node-color! x black)))
-
+;; fix-after-delete!: tree (U node null) (U node null) -> void
+(define (fix-after-delete! a-tree x x.p)
+  (let loop ([x x]
+             [x.p x.p])
+    (cond [(and (not (eq? x (tree-root a-tree)))
+                (or (null? x) (eq? (node-color x) black)))
+           (cond
+             [(eq? x (node-left x.p))
+              (define w (node-right x.p))
+              ;; w can't be null, according to rb structure rules.
+              (define w-1 (cond [(eq? (node-color w) red)
+                                 (set-node-color! w black)
+                                 (set-node-color! x.p red)
+                                 (left-rotate! a-tree x.p)
+                                 ;; Subtle: after left rotation, x.p is still the same.
+                                 (node-right x.p)]
+                                [else
+                                 w]))
+              (cond [(or (eq? (node-color (node-left w-1)) black)
+                         (eq? (node-color (node-right w-1)) black))
+                     (set-node-color! w-1 red)
+                     (loop x.p (node-parent x.p))]
+                    [else
+                     (define w-2 (cond [(eq? (node-color (node-right w-1)) black)
+                                        (set-node-color! (node-left w-1) black)
+                                        (set-node-color! w-1 red)
+                                        (right-rotate! a-tree w-1)
+                                        (node-right x.p)]
+                                       [else
+                                        w-1]))
+                     (set-node-color! w-2 (node-color x.p))
+                     (set-node-color! x.p black)
+                     (set-node-color! (node-right w-2) black)
+                     (left-rotate! a-tree x.p)
+                     (loop (tree-root a-tree) null)])]
+             [else
+              (cond
+                [(eq? x (node-right x.p))
+                 (define w (node-left x.p))
+                 (define w-1 (cond [(eq? (node-color w) red)
+                                    (set-node-color! w black)
+                                    (set-node-color! x.p red)
+                                    (right-rotate! a-tree x.p)
+                                    (node-left x.p)]
+                                   [else
+                                    w]))
+                 (cond [(or (eq? (node-color (node-left w-1)) black)
+                            (eq? (node-color (node-right w-1)) black))
+                        (set-node-color! w-1 red)
+                        (loop x.p (node-parent x.p))]
+                       [else
+                        (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
+                                           (set-node-color! (node-right w-1) black)
+                                           (set-node-color! w-1 red)
+                                           (left-rotate! a-tree w-1)
+                                           (node-right x.p)]
+                                          [else
+                                           w-1]))
+                        (set-node-color! w-2 (node-color x.p))
+                        (set-node-color! x.p black)
+                        (set-node-color! (node-left w-2) black)
+                        (right-rotate! a-tree x.p)
+                        (loop (tree-root a-tree) null)])])])]
+          [else
+           (unless (null? x)
+             (set-node-color! x black))])))
 
 
 ;; update-statistics-up-to-root!: tree node natural? -> void
@@ -914,13 +929,13 @@
     (test-suite
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
-      (define iterations 100)
+      (define iterations 1000)
       (define known-model '())
       (define (random-word)
         (build-string (add1 (random 20))
                       (lambda (i) 
                         (integer->char (+ (char->integer #\a) (random 26))))))
-
+      
       (define t (new-tree))
       (for ([i (in-range iterations)])
         (case (random 7)
@@ -947,13 +962,13 @@
              (set! known-model (let-values ([(a b) (split-at known-model k)])
                                  (append a (rest b))))
              (delete! t (search t offset)))])
-
+        
         (check-rb-structure! t)
         ;; Check that the structure is consistent with our model.
         (check-equal? known-model (map first (tree-items t))))
       (printf "angry monkey is tired.\n"))))
-
-
+  
+  
   
   
   
