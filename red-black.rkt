@@ -21,11 +21,6 @@
 ;;     Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
-;; 
-;;
-;; Other minor notes: I don't use a sentinel to represent NIL; I'm using null.
-;; So there are places in the code where CLRS just assigns to an attribute,
-;; and I instead need to check it for nullness.
 
 
 (provide tree?
@@ -51,20 +46,31 @@
 (define black 'black)
 
 
-(struct tree (root  ;; (U null node)    The root node of the tree.
-              first ;; (U null node)    optimization: Points to the first element.
-              last) ;; (U null node)    optimization: Points to the last element.
+(struct tree (root  ;; node    The root node of the tree.
+              first ;; node    optimization: Points to the first element.
+              last) ;; node    optimization: Points to the last element.
   #:mutable)
 
 
 (struct node (data          ;; Any
               self-width    ;; Natural
               subtree-width ;; Natural
-              parent     ;; (U Node null)
-              left       ;; (U Node null)
-              right      ;; (U Node null)
+              parent     ;; node
+              left       ;; node
+              right      ;; node
               color)     ;; (U red black)
   #:mutable)
+
+
+;; As in CLRS, we use a single nil sentinel node that represents nil.
+(define nil (let ([v (node #f 0 0 #f #f #f black)])
+              (set-node-parent! v v)
+              (set-node-left! v v)
+              (set-node-right! v v)))
+
+(define-syntax-rule (nil? x) (eq? x nil))
+  
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -74,7 +80,7 @@
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
 (define (new-tree)
-  (tree null null null))
+  (tree nil nil nil))
 
 
 ;; minimum: node -> node
@@ -83,7 +89,7 @@
   (let loop ([n n])
     (define left (node-left n))
     (cond
-      [(null? left)
+      [(nil? left)
        n]
       [else
        (loop left)])))
@@ -94,36 +100,36 @@
   (let loop ([n n])
     (define right (node-right n))
     (cond
-      [(null? right)
+      [(nil? right)
        n]
       [else
        (loop right)])))
 
 
-;; successor: node -> (U node null)
+;; successor: node -> node
 ;; Given a node, walks to the successor node.
 (define (successor x)
-  (cond [(not (null? (node-right x)))
+  (cond [(not (nil? (node-right x)))
          (minimum (node-right x))]
         [else
          (let loop ([x x]
                     [y (node-parent x)])
            (cond
-             [(and (not (null? y)) (eq? x (node-right y)))
+             [(and (not (nil? y)) (eq? x (node-right y)))
               (loop y (node-parent y))]
              [else
               y]))]))
 
-;; predecessor: node -> (U node null)
+;; predecessor: node -> node
 ;; Given a node, walks to the predecessor node.
 (define (predecessor x)
-  (cond [(not (null? (node-left x)))
+  (cond [(not (nil? (node-left x)))
          (maximum (node-left x))]
         [else
          (let loop ([x x]
                     [y (node-parent x)])
            (cond
-             [(and (not (null? y)) (eq? x (node-left y)))
+             [(and (not (nil? y)) (eq? x (node-left y)))
               (loop y (node-parent y))]
              [else
               y]))]))
@@ -136,11 +142,11 @@
 (define-syntax-rule (computed-node-subtree-width n)
   (let ([left (node-left n)]
         [right (node-right n)])
-    (+ (if (null? left)
+    (+ (if (nil? left)
            0 
            (node-subtree-width left))
        (node-self-width n)
-       (if (null? right)
+       (if (nil? right)
            0 
            (node-subtree-width right)))))
 
@@ -152,10 +158,10 @@
 (define (left-rotate! a-tree x)
   (define y (node-right x))
   (set-node-right! x (node-left y))
-  (unless (null? (node-left y))
+  (unless (nil? (node-left y))
     (set-node-parent! (node-left y) x))
   (set-node-parent! y (node-parent x))
-  (cond [(null? (node-parent x))
+  (cond [(nil? (node-parent x))
          (set-tree-root! a-tree y)]
         [(eq? x (node-left (node-parent x)))
          (set-node-left! (node-parent x) y)]
@@ -179,10 +185,10 @@
 (define (right-rotate! a-tree y)
   (define x (node-left y))
   (set-node-left! y (node-right x))
-  (unless (null? (node-right x))
+  (unless (nil? (node-right x))
     (set-node-parent! (node-right x) y))
   (set-node-parent! x (node-parent y))
-  (cond [(null? (node-parent y))
+  (cond [(nil? (node-parent y))
          (set-tree-root! a-tree x)]
         [(eq? y (node-right (node-parent y)))
          (set-node-right! (node-parent y) x)]
@@ -201,9 +207,9 @@
 ;; insert-last!: tree data width -> void
 ;; Insert after the last element in the tree.
 (define (insert-last! a-tree data width)
-  (define x (node data width width null null null red))
+  (define x (node data width width nil nil nil red))
   (cond
-    [(null? (tree-root a-tree))
+    [(nil? (tree-root a-tree))
      (set-tree-root! a-tree x)
      (set-tree-first! a-tree x)
      (set-tree-last! a-tree x)]
@@ -219,9 +225,9 @@
 ;; insert-first!: tree dat width -> void
 ;; Insert before the first element of the tree.
 (define (insert-first! a-tree data width)
-  (define x (node data width width null null null red))
+  (define x (node data width width nil nil nil red))
   (cond
-    [(null? (tree-root a-tree))
+    [(nil? (tree-root a-tree))
      (set-tree-root! a-tree x)
      (set-tree-first! a-tree x)
      (set-tree-last! a-tree x)]
@@ -242,12 +248,12 @@
 (define (fix-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
-    (when (and (not (null? z.p))
+    (when (and (not (nil? z.p))
                (eq? (node-color z.p) red))
       (define z.p.p (node-parent z.p))
       (cond [(eq? z.p (node-left z.p.p))
              (define y (node-right z.p.p))
-             (cond [(and (not (null? y))
+             (cond [(and (not (nil? y))
                          (eq? (node-color y) red))
                     (set-node-color! z.p black)
                     (set-node-color! y black)
@@ -268,7 +274,7 @@
                            (loop z)])])]
             [else
              (define y (node-left z.p.p))
-             (cond [(and (not (null? y))
+             (cond [(and (not (nil? y))
                          (eq? (node-color y) red))
                     (set-node-color! z.p black) ; fixme: write test to verify this
                     (set-node-color! y black)   ; fixme: write test to verify this
@@ -307,10 +313,10 @@
   (define y-original-color (node-color y))
   (cond
     
-    ;; If either the left or right child of z is null,
+    ;; If either the left or right child of z is nil,
     ;; deletion is merely replacing z with its other child x.
     ;; (Of course, we then have to repair the damage.)
-    [(null? (node-left z))
+    [(nil? (node-left z))
      (define z.p (node-parent z))
      (define x (node-right z))
      (transplant! a-tree z x)
@@ -319,34 +325,34 @@
      ;; where the replacement happened, since z's been replaced with x.
      ;; The x subtree is ok, so we need to begin the statistic repair
      ;; at z.p.
-     (when (not (null? z.p))
+     (when (not (nil? z.p))
        (update-statistics-up-to-root! a-tree z.p))
      
      ;; Finally, repair the rb tree damage: we have reduced the
      ;; black height so it's off by one at z.p, and potentially
      ;; introduced a red-red link.
-     ;; (If x is null, then what?!)
+     ;; (If x is nil, then what?!)
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x z.p))]
     
     ;; This case is symmetric with the previous case.
-    [(null? (node-right z))
+    [(nil? (node-right z))
      (define z.p (node-parent z))
      (define x (node-left z))
      (transplant! a-tree z x)
-     (when (not (null? z.p))
+     (when (not (nil? z.p))
        (update-statistics-up-to-root! a-tree z.p))
 
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x z.p))]
     
-    ;; The hardest case is when z has non-null left and right.
+    ;; The hardest case is when z has non-nil left and right.
     ;; We take the minimum of z's right subtree and replace
     ;; z with it.
     [else
      (let* ([y (minimum (node-right z))]
             [y-original-color (node-color y)])
-       ;; At this point, y's left is null by definition of minimum.
+       ;; At this point, y's left is nil by definition of minimum.
        (define y.p (node-parent y))
        (define x (node-right y))
        (cond
@@ -358,7 +364,7 @@
           ;; the parent pointer should do nothing.
           (transplant! a-tree z y)
           (set-node-left! y (node-left z))
-          (unless (null? (node-left y)) 
+          (unless (nil? (node-left y)) 
             (set-node-parent! (node-left y) y))
           (set-node-color! y (node-color z))
           (update-statistics-up-to-root! a-tree y)
@@ -368,11 +374,11 @@
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
-          (unless (null? (node-right y))
+          (unless (nil? (node-right y))
             (set-node-parent! (node-right y) y))
           (transplant! a-tree z y)
           (set-node-left! y (node-left z))
-          (unless (null? (node-left y)) 
+          (unless (nil? (node-left y)) 
             (set-node-parent! (node-left y) y))
           (set-node-color! y (node-color z))
           (update-statistics-up-to-root! a-tree y)
@@ -381,35 +387,35 @@
             (fix-after-delete! a-tree x y.p))]))]))
 
 
-;; transplant: tree node (U node null) -> void
+;; transplant: tree node (U node nil) -> void
 ;; INTERNAL
 ;; Replaces the instance of node u in a-tree with v.
 (define (transplant! a-tree u v)
   (define u.p (node-parent u))
-  (cond [(null? u.p)
+  (cond [(nil? u.p)
          (set-tree-root! a-tree v)]
         [(eq? u (node-left u.p))
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (unless (null? v)
+  (unless (nil? v)
     (set-node-parent! v u.p)))
 
 
-;; fix-after-delete!: tree (U node null) (U node null) -> void
+;; fix-after-delete!: tree (U node nil) (U node nil) -> void
 (define (fix-after-delete! a-tree x x.p)
-  (unless (or (null? x.p)
+  (unless (or (nil? x.p)
               (eq? x (node-left x.p))
               (eq? x (node-right x.p)))
     (error 'uh-oh!-3))
   (let loop ([x x]
              [x.p x.p])
     (cond [(and (not (eq? x (tree-root a-tree)))
-                (or (null? x) (eq? (node-color x) black)))
+                (or (nil? x) (eq? (node-color x) black)))
            (cond
              [(eq? x (node-left x.p))
               (define w (node-right x.p))
-              ;; w can't be null, according to rb structure rules.
+              ;; w can't be nil, according to rb structure rules.
               (define w-1 (cond [(eq? (node-color w) red)
                                  (set-node-color! w black)
                                  (set-node-color! x.p red)
@@ -418,8 +424,8 @@
                                  (node-right x.p)]
                                 [else
                                  w]))
-              (cond [(or (null? (node-left w-1))
-                         (null? (node-right w-1))
+              (cond [(or (nil? (node-left w-1))
+                         (nil? (node-right w-1))
                          (eq? (node-color (node-left w-1)) black)
                          (eq? (node-color (node-right w-1)) black))
                      (set-node-color! w-1 red)
@@ -436,7 +442,7 @@
                      (set-node-color! x.p black)
                      (set-node-color! (node-right w-2) black)
                      (left-rotate! a-tree x.p)
-                     (loop (tree-root a-tree) null)])]
+                     (loop (tree-root a-tree) nil)])]
 
              [else
               (cond
@@ -449,8 +455,8 @@
                                     (node-left x.p)]
                                    [else
                                     w]))
-                 (cond [(or (null? (node-left w-1))
-                            (null? (node-right w-1))
+                 (cond [(or (nil? (node-left w-1))
+                            (nil? (node-right w-1))
                             (eq? (node-color (node-left w-1)) black)
                             (eq? (node-color (node-right w-1)) black))
                         (set-node-color! w-1 red)
@@ -467,9 +473,9 @@
                         (set-node-color! x.p black)
                         (set-node-color! (node-left w-2) black)
                         (right-rotate! a-tree x.p)
-                        (loop (tree-root a-tree) null)])])])]
+                        (loop (tree-root a-tree) nil)])])])]
           [else
-           (unless (null? x)
+           (unless (nil? x)
              (set-node-color! x black))])))
 
 
@@ -481,30 +487,30 @@
 (define (update-statistics-up-to-root! a-tree a-node)
   (let loop ([a-node a-node])
     (cond
-      [(null? a-node)
+      [(nil? a-node)
        (void)]
       [else
        (set-node-subtree-width! a-node (computed-node-subtree-width a-node))
        (loop (node-parent a-node))])))
 
 
-;; subtree-width: (U node null) -> natural
+;; subtree-width: (U node nil) -> natural
 ;; INTERNAL
 ;; Return the subtree width of the tree rooted at n.
 (define-syntax-rule (subtree-width n)
-  (if (null? n)
+  (if (nil? n)
       0
       (node-subtree-width n)))
 
 
-;; search: tree natural -> (U node null)
+;; search: tree natural -> (U node nil)
 ;; Search for the node closest to offset.
 ;; Making the total length of the left tree at least offset, if possible.
 (define (search a-tree offset)
   (let loop ([offset offset]
              [a-node (tree-root a-tree)])
     (cond
-      [(null? a-node) null]
+      [(nil? a-node) nil]
       [else
        (define left (node-left a-node))
        (define left-subtree-width (subtree-width left))
@@ -547,7 +553,7 @@
     (let loop ([node (tree-root a-tree)]
                [acc null])
       (cond
-        [(null? node)
+        [(nil? node)
          acc]
         [else
          (loop (node-left node)
@@ -561,7 +567,7 @@
   (define (tree-height a-tree)
     (let loop ([node (tree-root a-tree)])
       (cond
-        [(null? node)
+        [(nil? node)
          0]
         [else
          (+ 1 (max (loop (node-left node))
@@ -573,7 +579,7 @@
     (let loop ([node (tree-root a-tree)]
                [acc 0])
       (cond
-        [(null? node)
+        [(nil? node)
          acc]
         [else
          (loop (node-left node) (loop (node-right node) (add1 acc)))])))
@@ -585,7 +591,7 @@
     (let loop ([a-node a-node]
                [acc 0])
       (cond
-        [(null? a-node)
+        [(nil? a-node)
          acc]
         [else
          (define right-count (loop (node-right a-node)
@@ -605,12 +611,12 @@
   ;; EXTRAORDINARILY expensive.  Do not use this outside of tests.
   (define (check-rb-structure! a-tree)
     (define (color n)
-      (if (null? n) black (node-color n)))
+      (if (nil? n) black (node-color n)))
     
     ;; No two red nodes should be adjacent:
     (let loop ([node (tree-root a-tree)])
       (cond
-        [(null? node)
+        [(nil? node)
          (void)]
         [(eq? red (color node))
          (when (or (eq? red (color (node-left node)))
@@ -622,17 +628,17 @@
     
     ;; The maximum and minimum should be correct
     (unless (eq? (tree-first a-tree)
-                 (if (null? (tree-root a-tree)) null (minimum (tree-root a-tree))))
+                 (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
       (error 'check-rb-structure "minimum is not first"))
     (unless (eq? (tree-last a-tree)
-                 (if (null? (tree-root a-tree)) null (maximum (tree-root a-tree))))
+                 (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree))))
       (error 'check-rb-structure "maximum is not last"))
     
     
     ;; The left and right sides should be black-balanced, for all subtrees.
     (let loop ([node (tree-root a-tree)])
       (cond
-        [(null? node)
+        [(nil? node)
          (void)]
         [else
          (unless (= (node-count-black (node-left node))
@@ -666,7 +672,7 @@
   (define (tree->list a-tree)
     (let loop ([node (tree-root a-tree)])
       (cond
-        [(null? node)
+        [(nil? node)
          null]
         [else
          (list (format "~a:~a:~a" 
@@ -685,12 +691,12 @@
      (test-begin
       (define t (new-tree))
       
-      (define alpha (node "alpha" 5 5 null null null null))
-      (define beta (node "beta" 4 5 null null null null))
-      (define gamma (node "gamma" 5 5 null null null null))
+      (define alpha (node "alpha" 5 5 nil nil nil nil))
+      (define beta (node "beta" 4 5 nil nil nil nil))
+      (define gamma (node "gamma" 5 5 nil nil nil nil))
       
-      (define x (node "x" 1 1 null alpha beta null))
-      (define y (node "y" 1 1 null null gamma null))
+      (define x (node "x" 1 1 nil alpha beta nil))
+      (define y (node "y" 1 1 nil nil gamma nil))
       (set-tree-root! t y)
       (set-node-left! y x)
       (set-node-parent! x y)
@@ -757,7 +763,7 @@
       (insert-last! t "bye" 3)
       (define the-root (tree-root t))
       (check-equal? (node-left the-root)
-                    null)
+                    nil)
       (check-equal? (node-color the-root)
                     black)
       (check-equal? (node-subtree-width the-root) 5)
@@ -791,19 +797,19 @@
     (test-suite
      "deletion-tests"
      (test-case
-      "Deleting the last node in a tree should set us back to the null case"
+      "Deleting the last node in a tree should set us back to the nil case"
       (define t (new-tree))
       (insert-first! t "hello" 5)
       (delete! t (tree-root t))
-      (check-equal? (tree-root t) null))
+      (check-equal? (tree-root t) nil))
      
      (test-case
-      "Deleting the last node in a tree: first and last should be null"
+      "Deleting the last node in a tree: first and last should be nil"
       (define t (new-tree))
       (insert-first! t "hello" 5)
       (delete! t (tree-root t))
-      (check-equal? (tree-first t) null)
-      (check-equal? (tree-last t) null))
+      (check-equal? (tree-first t) nil)
+      (check-equal? (tree-last t) nil))
      
      (test-case
       "Delete the last node in a two-node tree: basic structure"
@@ -812,8 +818,8 @@
       (insert-last! t "files" 5)
       (delete! t (node-right (tree-root t)))
       (check-equal? (node-data (tree-root t)) "dresden")
-      (check-equal? (node-left (tree-root t)) null)
-      (check-equal? (node-right (tree-root t)) null))
+      (check-equal? (node-left (tree-root t)) nil)
+      (check-equal? (node-right (tree-root t)) nil))
      
      (test-case
       "Delete the last node in a two-node tree: check the subtree-width has been updated"
@@ -840,8 +846,8 @@
      "search-tests"
      (test-begin
       (define t (new-tree))
-      (check-equal? (search t 0) null)
-      (check-equal? (search t 129348) null))
+      (check-equal? (search t 0) nil)
+      (check-equal? (search t 129348) nil))
      
      (test-begin
       (define t (new-tree))
@@ -852,9 +858,9 @@
       (check-equal? (node-data (search t 3)) "hello")
       (check-equal? (node-data (search t 4)) "hello")
       ;; Edge case:
-      (check-equal? (search t 5) null)
+      (check-equal? (search t 5) nil)
       ;; Edge case:
-      (check-equal? (search t -1) null))
+      (check-equal? (search t -1) nil))
      
      
      ;; Empty nodes should get skipped over by search, though
@@ -1023,7 +1029,7 @@
   
   
   (define all-tests
-    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
