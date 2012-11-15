@@ -213,7 +213,7 @@
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
   (update-statistics-up-to-root! a-tree x)
-  (fix-red-red-after-insert! a-tree x))
+  (fix-after-insert! a-tree x))
 
 
 ;; insert-first!: tree dat width -> void
@@ -231,15 +231,15 @@
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
   (update-statistics-up-to-root! a-tree x)
-  (fix-red-red-after-insert! a-tree x))
+  (fix-after-insert! a-tree x))
 
 
-;; fix-red-after-insert!: tree node natural -> void
+;; fix-after-insert!: tree node natural -> void
 ;; INTERNAL
 ;; Corrects the red/black tree property via node rotations after an
 ;; insertion.  If there's a violation, then it's at z where both z and
 ;; its parent are red.
-(define (fix-red-red-after-insert! a-tree z)
+(define (fix-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
     (when (and (not (null? z.p))
@@ -306,6 +306,7 @@
   (define y z)
   (define y-original-color (node-color y))
   (cond
+    
     ;; If either the left or right child of z is null,
     ;; deletion is merely replacing z with its other child.
     ;; (Of course, we then have to repair the damage.)
@@ -313,14 +314,21 @@
      (define z.p (node-parent z))
      (define x (node-right z))
      (transplant! a-tree z x)
+     
      ;; At this point, we need to repair the statistic where
      ;; where the replacement happened, since z's been replaced with x.
      ;; The x subtree is ok, so we need to begin the statistic repair
      ;; at z.p.
      (when (not (null? z.p))
        (update-statistics-up-to-root! a-tree z.p))
+     
+     ;; Finally, repair the rb tree damage: we have reduced the
+     ;; black height so it's off by one at z.p, and potentially
+     ;; introduced a red-red link.
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
+
+    ;; This case is symmetric with the previous case.
     [(null? (node-right z))
      (define z.p (node-parent z))
      (define x (node-left z))
@@ -329,10 +337,11 @@
        (update-statistics-up-to-root! a-tree z.p))
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
-    [else
+
      ;; The hardest case is when z has non-null left and right.
      ;; We take the minimum of z's right subtree and replace
      ;; z with it.
+    [else
      (let* ([y (minimum (node-right z))]
             [y-original-color (node-color y)])
        ;; At this point, y's left is null by definition of minimum.
@@ -362,7 +371,6 @@
 ;; transplant: tree node (U node null) -> void
 ;; INTERNAL
 ;; Replaces the instance of node u in a-tree with v.
-;; Warning: this is for internal use of delete! alone.
 (define (transplant! a-tree u v)
   (define u.p (node-parent u))
   (cond [(null? u.p)
