@@ -306,6 +306,9 @@
   (define y z)
   (define y-original-color (node-color y))
   (cond
+    ;; If either the left or right child of z is null,
+    ;; deletion is merely replacing z with its other child.
+    ;; (Of course, we then have to repair the damage.)
     [(null? (node-left z))
      (define x (node-right z))
      (transplant! a-tree z (node-right z))
@@ -319,12 +322,21 @@
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
     [else
+     ;; The harder case is when z has non-null left and right.
+     ;; We take the minimum of z's right subtree and replace
+     ;; z with it.
      (let* ([y (minimum (node-right z))]
             [y-original-color (node-color y)])
+       ;; At this point, y's left is null by definition of minimum.
        (define x (node-right y))
        (cond
          [(eq? (node-parent y) z)
-          (unless (null? x) (set-node-parent! x y))]
+          ;; In CLRS, this is steps 12 and 13 of RB-DELETE.  However,
+          ;; the assignment is a no-op!  By definition, x is already
+          ;; y's child, so setting the parent point does nothing.
+          (void)
+          #;(unless (null? x) 
+              (set-node-parent! x y))]
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
@@ -332,7 +344,8 @@
             (set-node-parent! (node-right y) y))])
        (transplant! a-tree z y)
        (set-node-left! y (node-left z))
-       (unless (null? (node-left y)) (set-node-parent! (node-left y) y))
+       (unless (null? (node-left y)) 
+         (set-node-parent! (node-left y) y))
        (set-node-color! y (node-color z))
        (update-statistics-up-to-root! a-tree y)
        (when (eq? black y-original-color)
