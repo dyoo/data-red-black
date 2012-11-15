@@ -26,6 +26,7 @@
 (provide tree?
          tree-root
          node?
+         nil?
          node-data
          node-self-width
          node-subtree-width
@@ -69,7 +70,7 @@
               (set-node-right! v v)))
 
 (define-syntax-rule (nil? x) (eq? x nil))
-  
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -333,7 +334,7 @@
      ;; introduced a red-red link.
      ;; (If x is nil, then what?!)
      (when (eq? black y-original-color)
-       (fix-after-delete! a-tree x z.p))]
+       (fix-after-delete! a-tree x))]
     
     ;; This case is symmetric with the previous case.
     [(nil? (node-right z))
@@ -342,9 +343,9 @@
      (transplant! a-tree z x)
      (when (not (nil? z.p))
        (update-statistics-up-to-root! a-tree z.p))
-
+     
      (when (eq? black y-original-color)
-       (fix-after-delete! a-tree x z.p))]
+       (fix-after-delete! a-tree x))]
     
     ;; The hardest case is when z has non-nil left and right.
     ;; We take the minimum of z's right subtree and replace
@@ -357,20 +358,18 @@
        (define x (node-right y))
        (cond
          [(eq? y.p z)
-          ;; In CLRS, this is steps 12 and 13 of RB-DELETE.  However,
-          ;; the assignment "x.p = y" is always no-op when we don't use
-          ;; the sentinel NIL node that CLRS uses.
-          ;; By definition, x is already y's child, so setting
-          ;; the parent pointer should do nothing.
+          ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
+          ;; Be aware that x here can be nil, in which case we've now
+          ;; changed the contents of nil.
+          (set-node-parent! x y)
           (transplant! a-tree z y)
           (set-node-left! y (node-left z))
           (unless (nil? (node-left y)) 
             (set-node-parent! (node-left y) y))
           (set-node-color! y (node-color z))
           (update-statistics-up-to-root! a-tree y)
-          
           (when (eq? black y-original-color)
-            (fix-after-delete! a-tree x y))]
+            (fix-after-delete! a-tree x))]
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
@@ -382,9 +381,8 @@
             (set-node-parent! (node-left y) y))
           (set-node-color! y (node-color z))
           (update-statistics-up-to-root! a-tree y)
-          
           (when (eq? black y-original-color)
-            (fix-after-delete! a-tree x y.p))]))]))
+            (fix-after-delete! a-tree x))]))]))
 
 
 ;; transplant: tree node (U node nil) -> void
@@ -402,78 +400,67 @@
     (set-node-parent! v u.p)))
 
 
-;; fix-after-delete!: tree (U node nil) (U node nil) -> void
-(define (fix-after-delete! a-tree x x.p)
-  (unless (or (nil? x.p)
-              (eq? x (node-left x.p))
-              (eq? x (node-right x.p)))
-    (error 'uh-oh!-3))
-  (let loop ([x x]
-             [x.p x.p])
+;; fix-after-delete!: tree node -> void
+(define (fix-after-delete! a-tree x)
+  (let loop ([x x])
     (cond [(and (not (eq? x (tree-root a-tree)))
-                (or (nil? x) (eq? (node-color x) black)))
+                (eq? (node-color x) black))
            (cond
-             [(eq? x (node-left x.p))
-              (define w (node-right x.p))
+             [(eq? x (node-left (node-parent x)))
+              (define w (node-right (node-parent x)))
               ;; w can't be nil, according to rb structure rules.
               (define w-1 (cond [(eq? (node-color w) red)
                                  (set-node-color! w black)
-                                 (set-node-color! x.p red)
-                                 (left-rotate! a-tree x.p)
-                                 ;; Subtle: after left rotation, x.p is still the same.
-                                 (node-right x.p)]
+                                 (set-node-color! (node-parent x) red)
+                                 (left-rotate! a-tree (node-parent x))
+                                 (node-right (node-parent x))]
                                 [else
                                  w]))
-              (cond [(or (nil? (node-left w-1))
-                         (nil? (node-right w-1))
-                         (eq? (node-color (node-left w-1)) black)
+              (cond [(or (eq? (node-color (node-left w-1)) black)
                          (eq? (node-color (node-right w-1)) black))
                      (set-node-color! w-1 red)
-                     (loop x.p (node-parent x.p))]
+                     (loop (node-parent x))]
                     [else
                      (define w-2 (cond [(eq? (node-color (node-right w-1)) black)
                                         (set-node-color! (node-left w-1) black)
                                         (set-node-color! w-1 red)
                                         (right-rotate! a-tree w-1)
-                                        (node-right x.p)]
+                                        (node-right (node-parent x))]
                                        [else
                                         w-1]))
-                     (set-node-color! w-2 (node-color x.p))
-                     (set-node-color! x.p black)
+                     (set-node-color! w-2 (node-color (node-parent x)))
+                     (set-node-color! (node-parent x) black)
                      (set-node-color! (node-right w-2) black)
-                     (left-rotate! a-tree x.p)
+                     (left-rotate! a-tree (node-parent x))
                      (loop (tree-root a-tree) nil)])]
-
-             [else
-              (cond
-                [(eq? x (node-right x.p))
-                 (define w (node-left x.p))
-                 (define w-1 (cond [(eq? (node-color w) red)
-                                    (set-node-color! w black)
-                                    (set-node-color! x.p red)
-                                    (right-rotate! a-tree x.p)
-                                    (node-left x.p)]
-                                   [else
-                                    w]))
-                 (cond [(or (nil? (node-left w-1))
-                            (nil? (node-right w-1))
-                            (eq? (node-color (node-left w-1)) black)
-                            (eq? (node-color (node-right w-1)) black))
-                        (set-node-color! w-1 red)
-                        (loop x.p (node-parent x.p))]
-                       [else
-                        (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
-                                           (set-node-color! (node-right w-1) black)
-                                           (set-node-color! w-1 red)
-                                           (left-rotate! a-tree w-1)
-                                           (node-right x.p)]
-                                          [else
-                                           w-1]))
-                        (set-node-color! w-2 (node-color x.p))
-                        (set-node-color! x.p black)
-                        (set-node-color! (node-left w-2) black)
-                        (right-rotate! a-tree x.p)
-                        (loop (tree-root a-tree) nil)])])])]
+             
+             [else 
+              (define w (node-left (node-parent x)))
+              ;; w can't be nil, according to rb structure rules.
+              (define w-1 (cond [(eq? (node-color w) red)
+                                 (set-node-color! w black)
+                                 (set-node-color! (node-parent x) red)
+                                 (right-rotate! a-tree (node-parent x))
+                                 (node-left (node-parent x))]
+                                [else
+                                 w]))
+              (cond [(or (eq? (node-color (node-left w-1)) black)
+                         (eq? (node-color (node-right w-1)) black))
+                     (set-node-color! w-1 red)
+                     (loop (node-parent x))]
+                    [else
+                     (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
+                                        (set-node-color! (node-right w-1) black)
+                                        (set-node-color! w-1 red)
+                                        (left-rotate! a-tree w-1)
+                                        (node-left (node-parent x))]
+                                       [else
+                                        w-1]))
+                     (set-node-color! w-2 (node-color (node-parent x)))
+                     (set-node-color! (node-parent x) black)
+                     (set-node-color! (node-left w-2) black)
+                     (right-rotate! a-tree (node-parent x))
+                     (loop (tree-root a-tree) nil)])])]
           [else
            (unless (nil? x)
              (set-node-color! x black))])))
@@ -544,6 +531,7 @@
            rackunit/text-ui
            racket/string
            racket/list
+           racket/class
            "test-data/all-words.rkt")
   
   
@@ -1029,7 +1017,7 @@
   
   
   (define all-tests
-    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
