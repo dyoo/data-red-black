@@ -825,7 +825,26 @@
       (delete! t (node-right (tree-root t)))
       (check-true (node? (tree-root t)))
       (check-equal? (tree-first t) (tree-root t))
-      (check-equal? (tree-last t) (tree-root t)))))
+      (check-equal? (tree-last t) (tree-root t)))
+     
+     
+     (test-case
+      "bigger case identified by angry monkey"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (insert-last! t "d" 1)
+      (insert-last! t "e" 1)
+      (check-rb-structure! t)
+      (delete! t (search t 1))
+      (check-rb-structure! t)
+      (delete! t (search t 1))
+      (check-rb-structure! t)
+      (displayln (tree->list t)) ;; before
+      (delete! t (search t 0))
+      (displayln (tree->list t)) ;; after
+      (check-rb-structure! t))))
   
   
   
