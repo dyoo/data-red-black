@@ -362,7 +362,7 @@
                      (set-node-left! y (node-left z))
                      (set-node-parent! (node-left y) y)
                      (set-node-color! y (node-color z))
-                     (update-statistics-up-to-root! a-tree y)
+                     (update-statistics-up-to-root! a-tree (node-parent x))
                      (values x y-original-color))])])
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x)]
