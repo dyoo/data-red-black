@@ -313,65 +313,65 @@
   
   (define y z)
   (define y-original-color (node-color y))
-  (define x (cond
-              ;; If either the left or right child of z is nil,
-              ;; deletion is merely replacing z with its other child x.
-              ;; (Of course, we then have to repair the damage.)
-              [(nil? (node-left z))
-               (define z.p (node-parent z))
-               (define x (node-right z))
-               (transplant! a-tree z x)
-               
-               ;; At this point, we need to repair the statistic where
-               ;; where the replacement happened, since z's been replaced with x.
-               ;; The x subtree is ok, so we need to begin the statistic repair
-               ;; at z.p.
-               (when (not (nil? z.p))
-                 (update-statistics-up-to-root! a-tree z.p))
-               x]
-              
-              ;; This case is symmetric with the previous case.
-              [(nil? (node-right z))
-               (define z.p (node-parent z))
-               (define x (node-left z))
-               (transplant! a-tree z x)
-               (when (not (nil? z.p))
-                 (update-statistics-up-to-root! a-tree z.p))
-               x]
-              
-              
-              ;; The hardest case is when z has non-nil left and right.
-              ;; We take the minimum of z's right subtree and replace
-              ;; z with it.
-              [else
-               (let* ([y (minimum (node-right z))]
-                      [y-original-color (node-color y)])
-                 ;; At this point, y's left is nil by definition of minimum.
-                 (define y.p (node-parent y))
-                 (define x (node-right y))
-                 (cond
-                   [(eq? y.p z)
-                    ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
-                    ;; Be aware that x here can be nil, in which case we've now
-                    ;; changed the contents of nil.
-                    (set-node-parent! x y)]
-                   [else
-                    (transplant! a-tree y (node-right y))
-                    (set-node-right! y (node-right z))
-                    (set-node-parent! (node-right y) y)])
-                 
-                 (transplant! a-tree z y)
-                 (set-node-left! y (node-left z))
-                 (set-node-parent! (node-left y) y)
-                 (set-node-color! y (node-color z))
-                 (update-statistics-up-to-root! a-tree y)
-                 x)]))
+  (let-values ([(x y-original-color)
+                (cond
+                  ;; If either the left or right child of z is nil,
+                  ;; deletion is merely replacing z with its other child x.
+                  ;; (Of course, we then have to repair the damage.)
+                  [(nil? (node-left z))
+                   (define z.p (node-parent z))
+                   (define x (node-right z))
+                   (transplant! a-tree z x)
+                   
+                   ;; At this point, we need to repair the statistic where
+                   ;; where the replacement happened, since z's been replaced with x.
+                   ;; The x subtree is ok, so we need to begin the statistic repair
+                   ;; at z.p.
+                   (when (not (nil? z.p))
+                     (update-statistics-up-to-root! a-tree z.p))
+                   (values x y-original-color)]
+                  
+                  ;; This case is symmetric with the previous case.
+                  [(nil? (node-right z))
+                   (define z.p (node-parent z))
+                   (define x (node-left z))
+                   (transplant! a-tree z x)
+                   (when (not (nil? z.p))
+                     (update-statistics-up-to-root! a-tree z.p))
+                   (values x y-original-color)]
+                  
+                  ;; The hardest case is when z has non-nil left and right.
+                  ;; We take the minimum of z's right subtree and replace
+                  ;; z with it.
+                  [else
+                   (let* ([y (minimum (node-right z))]
+                          [y-original-color (node-color y)])
+                     ;; At this point, y's left is nil by definition of minimum.
+                     (define y.p (node-parent y))
+                     (define x (node-right y))
+                     (cond
+                       [(eq? y.p z)
+                        ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
+                        ;; Be aware that x here can be nil, in which case we've now
+                        ;; changed the contents of nil.
+                        (set-node-parent! x y)]
+                       [else
+                        (transplant! a-tree y (node-right y))
+                        (set-node-right! y (node-right z))
+                        (set-node-parent! (node-right y) y)])
+                     
+                     (transplant! a-tree z y)
+                     (set-node-left! y (node-left z))
+                     (set-node-parent! (node-left y) y)
+                     (set-node-color! y (node-color z))
+                     (update-statistics-up-to-root! a-tree y)
+                     (values x y-original-color))])])
+    (cond [(eq? black y-original-color)
+           (fix-after-delete! a-tree x)]
+          [else
+           (printf "not fixing\n")])))
   
-  (when (eq? black y-original-color)
-    (fix-after-delete! a-tree x))
-  
-  ;; question: do I really want to do this?
-  (set-node-parent! nil nil))
+
 
 
 ;; transplant: tree node (U node nil) -> void
@@ -391,6 +391,7 @@
 
 ;; fix-after-delete!: tree node -> void
 (define (fix-after-delete! a-tree x)
+  (printf "fixing\n")
   (let loop ([x x])
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (eq? (node-color x) black))
@@ -518,6 +519,7 @@
            racket/string
            racket/list
            racket/class
+           racket/promise
            "test-data/all-words.rkt")
   
   
@@ -575,7 +577,7 @@
                                    (+ (if (eq? black (node-color a-node)) 1 0)
                                       acc)))
          (unless (= right-count left-count)
-           (error 'node-count-black))
+           (error 'node-count-black "~a vs ~a" right-count left-count))
          right-count])))
   
   
@@ -899,12 +901,12 @@
      (test-begin
       (define t (new-tree))
       
-      (for ([word (in-list all-words)])
+      (for ([word (in-list (force all-words))])
         (insert-last! t word (string-length word)))
       
       (check-rb-structure! t)
       
-      (for/fold ([offset 0]) ([word (in-list all-words)])
+      (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data (search t offset)) word)
         (+ offset (string-length word))))
      
@@ -912,12 +914,12 @@
      ;; Do it backwards
      (test-begin
       (define t (new-tree))
-      (for ([word (in-list (reverse all-words))])
+      (for ([word (in-list (reverse (force all-words)))])
         (insert-first! t word (string-length word)))
       
       (check-rb-structure! t)
       
-      (for/fold ([offset 0]) ([word (in-list all-words)])
+      (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data (search t offset)) word)
         (+ offset (string-length word)))
       (void))))
@@ -981,7 +983,7 @@
       (define t (new-tree))
       (collect-garbage)
       (time
-       (for ([word (in-list all-words)]
+       (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
@@ -993,7 +995,7 @@
       ;; The explicit calls to collect-garbage here are just to eliminate that effect.
       (collect-garbage)
       (time
-       (for ([word (in-list all-words)]
+       (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))

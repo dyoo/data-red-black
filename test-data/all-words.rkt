@@ -8,10 +8,10 @@
 (provide all-words)
 (define-runtime-path words.gz "words.gz")
 (define all-words
-  (let ()
-    (define-values (in out) (make-pipe))
-    (thread (lambda () (call-with-input-file words.gz
-                         (lambda (fin) 
-                           (gunzip-through-ports fin out)
-                           (close-output-port out)))))
-    (for/list ([word (in-lines in)]) word)))
+  (delay (let ()
+           (define-values (in out) (make-pipe))
+           (thread (lambda () (call-with-input-file words.gz
+                                (lambda (fin) 
+                                  (gunzip-through-ports fin out)
+                                  (close-output-port out)))))
+           (for/list ([word (in-lines in)]) word))))
