@@ -395,25 +395,32 @@
                 (eq? (node-color x) black))
            (cond
              [(eq? x (node-left (node-parent x)))
+              (displayln 1)
               (define w (node-right (node-parent x)))
               (define w-1 (cond [(eq? (node-color w) red)
+                                 (displayln 4)
                                  (set-node-color! w black)
                                  (set-node-color! (node-parent x) red)
                                  (left-rotate! a-tree (node-parent x))
                                  (node-right (node-parent x))]
                                 [else
+                                 (displayln 5)
                                  w]))
               (cond [(and (eq? (node-color (node-left w-1)) black)
                           (eq? (node-color (node-right w-1)) black))
+                     (displayln 2)
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
+                     (displayln 3)
                      (define w-2 (cond [(eq? (node-color (node-right w-1)) black)
+                                        (displayln 6)
                                         (set-node-color! (node-left w-1) black)
                                         (set-node-color! w-1 red)
                                         (right-rotate! a-tree w-1)
                                         (node-right (node-parent x))]
                                        [else
+                                        (displayln 7)
                                         w-1]))
                      (set-node-color! w-2 (node-color (node-parent x)))
                      (set-node-color! (node-parent x) black)
@@ -421,25 +428,32 @@
                      (left-rotate! a-tree (node-parent x))
                      (loop (tree-root a-tree))])]
              [else
+              (displayln 8)
               (define w (node-left (node-parent x)))
               (define w-1 (cond [(eq? (node-color w) red)
+                                 (displayln 9)
                                  (set-node-color! w black)
                                  (set-node-color! (node-parent x) red)
                                  (right-rotate! a-tree (node-parent x))
                                  (node-left (node-parent x))]
                                 [else
+                                 (displayln 10)
                                  w]))
               (cond [(and (eq? (node-color (node-left w-1)) black)
                           (eq? (node-color (node-right w-1)) black))
+                     (displayln 11)
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
+                     (displayln 12)
                      (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
+                                        (displayln 13)
                                         (set-node-color! (node-right w-1) black)
                                         (set-node-color! w-1 red)
                                         (left-rotate! a-tree w-1)
                                         (node-left (node-parent x))]
                                        [else
+                                        (displayln 14)
                                         w-1]))
                      (set-node-color! w-2 (node-color (node-parent x)))
                      (set-node-color! (node-parent x) black)
@@ -958,7 +972,13 @@
                               (+ offset (string-length word))))
              (set! known-model (let-values ([(a b) (split-at known-model k)])
                                  (append a (rest b))))
-             (delete! t (search t offset))))))
+             (delete! t (search t offset))))
+      
+      (define/public (check-consistency!)
+        ;; Check that the structure is consistent with our model.
+        (check-equal? known-model (map first (tree-items t)))
+        ;; And make sure it's still an rb-tree:
+        (check-rb-structure! t))))
       
   
   (define angry-monkey-test
@@ -975,11 +995,7 @@
            (send m insert-back!)]
           [(6)
            (send m delete-random!)])
-        
-        ;; Check that the structure is consistent with our model.
-        (check-equal? (send m get-model) (map first (tree-items (send m get-tree))))
-        ;; And make sure it's still an rb-tree:
-        (check-rb-structure! (send m get-tree)))
+        (send m check-consistency!))
       (printf "angry monkey is tired.\n"))))
   
   
