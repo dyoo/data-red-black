@@ -367,7 +367,7 @@
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x)]
           [else
-           (printf "not fixing\n")])))
+           (void)])))
   
 
 
@@ -389,40 +389,30 @@
 
 ;; fix-after-delete!: tree node -> void
 (define (fix-after-delete! a-tree x)
-  (printf "fixing\n")
   (let loop ([x x])
-    (printf "x is ~s, x.p is ~s\n" (node-data x) (node-data (node-parent x)))
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (eq? (node-color x) black))
            (cond
              [(eq? x (node-left (node-parent x)))
-              (displayln 1)
               (define w (node-right (node-parent x)))
               (define w-1 (cond [(eq? (node-color w) red)
-                                 (displayln 4)
                                  (set-node-color! w black)
                                  (set-node-color! (node-parent x) red)
                                  (left-rotate! a-tree (node-parent x))
                                  (node-right (node-parent x))]
                                 [else
-                                 (displayln 5)
                                  w]))
               (cond [(and (eq? (node-color (node-left w-1)) black)
                           (eq? (node-color (node-right w-1)) black))
-                     (displayln 2)
-                     (printf "coloring ~a red\n" (node-data w-1))
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
-                     (displayln 3)
                      (define w-2 (cond [(eq? (node-color (node-right w-1)) black)
-                                        (displayln 6)
                                         (set-node-color! (node-left w-1) black)
                                         (set-node-color! w-1 red)
                                         (right-rotate! a-tree w-1)
                                         (node-right (node-parent x))]
                                        [else
-                                        (displayln 7)
                                         w-1]))
                      (set-node-color! w-2 (node-color (node-parent x)))
                      (set-node-color! (node-parent x) black)
@@ -430,32 +420,25 @@
                      (left-rotate! a-tree (node-parent x))
                      (loop (tree-root a-tree))])]
              [else
-              (displayln 8)
               (define w (node-left (node-parent x)))
               (define w-1 (cond [(eq? (node-color w) red)
-                                 (displayln 9)
                                  (set-node-color! w black)
                                  (set-node-color! (node-parent x) red)
                                  (right-rotate! a-tree (node-parent x))
                                  (node-left (node-parent x))]
                                 [else
-                                 (displayln 10)
                                  w]))
               (cond [(and (eq? (node-color (node-left w-1)) black)
                           (eq? (node-color (node-right w-1)) black))
-                     (displayln 11)
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
-                     (displayln 12)
                      (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
-                                        (displayln 13)
                                         (set-node-color! (node-right w-1) black)
                                         (set-node-color! w-1 red)
                                         (left-rotate! a-tree w-1)
                                         (node-left (node-parent x))]
                                        [else
-                                        (displayln 14)
                                         w-1]))
                      (set-node-color! w-2 (node-color (node-parent x)))
                      (set-node-color! (node-parent x) black)
@@ -1006,7 +989,7 @@
     (test-suite
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
-      (define iterations 1000)
+      (define iterations 100)
       (define m (new angry-monkey%))
       (for ([i (in-range iterations)])
         (case (random 7)
@@ -1057,9 +1040,9 @@
   (define all-tests
     (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    #;angry-monkey-test)
+                    angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    #;angry-monkey-test
+                    angry-monkey-test
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
