@@ -375,6 +375,7 @@
 ;; transplant: tree node (U node nil) -> void
 ;; INTERNAL
 ;; Replaces the instance of node u in a-tree with v.
+;; Note: if v is nil, this sets nil's parent pointer too.
 (define (transplant! a-tree u v)
   (define u.p (node-parent u))
   (cond [(nil? u.p)
@@ -383,14 +384,14 @@
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (unless (nil? v)
-    (set-node-parent! v u.p)))
+  (set-node-parent! v u.p))
 
 
 ;; fix-after-delete!: tree node -> void
 (define (fix-after-delete! a-tree x)
   (printf "fixing\n")
   (let loop ([x x])
+    (printf "x is ~s, x.p is ~s\n" (node-data x) (node-data (node-parent x)))
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (eq? (node-color x) black))
            (cond
@@ -409,6 +410,7 @@
               (cond [(and (eq? (node-color (node-left w-1)) black)
                           (eq? (node-color (node-right w-1)) black))
                      (displayln 2)
+                     (printf "coloring ~a red\n" (node-data w-1))
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
@@ -1055,9 +1057,9 @@
   (define all-tests
     (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    angry-monkey-test)
+                    #;angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    angry-monkey-test
+                    #;angry-monkey-test
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
