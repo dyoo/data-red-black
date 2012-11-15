@@ -968,19 +968,21 @@
       
       (define/public (delete-random!)
         (when (not (empty? known-model))
-             ;; Delete a random word if we can.
-             (define k (random (length known-model)))
-             (printf "deleting ~s\n" (list-ref known-model k))
-             (define offset (for/fold ([offset 0]) ([i (in-range k)]
-                                                    [word (in-list known-model)])
-                              (+ offset (string-length word))))
-             (set! known-model (let-values ([(a b) (split-at known-model k)])
-                                 (append a (rest b))))
-             (delete! t (search t offset))))
+          ;; Delete a random word if we can.
+          (define k (random (length known-model)))
+          (printf "deleting ~s\n" (list-ref known-model k))
+          (define offset (for/fold ([offset 0]) ([i (in-range k)]
+                                                 [word (in-list known-model)])
+                           (+ offset (string-length word))))
+          (define node (search t offset))
+          (printf "found node: ~s\n" (node-data node))
+          (delete! t node)
+          (set! known-model (let-values ([(a b) (split-at known-model k)])
+                              (append a (rest b))))))
       
       (define/public (check-consistency!)
         ;; Check that the structure is consistent with our model.
-        (check-equal? known-model (map first (tree-items t)))
+        (check-equal? (map first (tree-items t)) known-model)
         ;; And make sure it's still an rb-tree:
         (check-rb-structure! t))))
       
