@@ -637,7 +637,24 @@
       (error 'check-rb-structure 
              (format "rb violation: height ~a beyond 2 lg(~a)=~a" 
                      observed-height (add1 count)
-                     (* 2 (log (add1 count)))))))
+                     (* 2 (log (add1 count))))))
+    
+    
+    ;; The subtree widths should be consistent
+    (let loop ([n (tree-root a-tree)])
+      (cond
+        [(nil? n)
+         0]
+        [else
+         (define left-subtree-size (loop (node-left n)))
+         (define right-subtree-size (loop (node-right n)))
+         (unless (= (node-subtree-width n)
+                    (+ left-subtree-size right-subtree-size (node-self-width n)))
+           (error 'check-rb-structure "stale subtree width: expected ~a, but observe ~a"
+                  (+ left-subtree-size right-subtree-size (node-self-width n))
+                  (node-subtree-width n)))
+         (+ left-subtree-size right-subtree-size (node-self-width n))])))
+
   
   
   ;; tree->list: tree -> list
