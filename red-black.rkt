@@ -324,14 +324,15 @@
        (define x (node-right y))
        (cond
          [(eq? (node-parent y) z)
-          (set-node-parent! x y)]
+          (unless (null? x) (set-node-parent! x y))]
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
-          (set-node-parent! (node-right y) y)])
+          (unless (null? (node-right y))
+            (set-node-parent! (node-right y) y))])
        (transplant! a-tree z y)
        (set-node-left! y (node-left z))
-       (set-node-parent! (node-left y) y)
+       (unless (null? (node-left y)) (set-node-parent! (node-left y) y))
        (set-node-color! y (node-color z))
        (update-statistics-up-to-root! a-tree y)
        (when (eq? black y-original-color)
@@ -874,10 +875,10 @@
     (test-suite
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
-      (define iterations 10)
+      (define iterations 100)
       (define known-model '())
       (define (random-word)
-        (build-string (random 20) 
+        (build-string (add1 (random 20))
                       (lambda (i) 
                         (integer->char (+ (char->integer #\a) (random 26))))))
 
