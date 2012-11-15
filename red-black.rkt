@@ -911,7 +911,8 @@
 
         (check-rb-structure! t)
         ;; Check that the structure is consistent with our model.
-        (check-equal? known-model (map first (tree-items t)))))))
+        (check-equal? known-model (map first (tree-items t))))
+      (printf "angry monkey is tired.\n"))))
 
 
   
@@ -949,7 +950,7 @@
   
   
   (define all-tests
-    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
