@@ -80,22 +80,22 @@
 ;; minimum: node -> node
 ;; Looks for the minimum element of the tree rooted at n.
 (define (minimum n)
-  (let loop ([node n])
+  (let loop ([n n])
     (define left (node-left n))
     (cond
       [(null? left)
-       node]
+       n]
       [else
        (loop left)])))
 
 ;; maximum: node -> node
 ;; Looks for the maximum element of the tree rooted at n.
 (define (maximum n)
-  (let loop ([node n])
+  (let loop ([n n])
     (define right (node-right n))
     (cond
       [(null? right)
-       node]
+       n]
       [else
        (loop right)])))
 
@@ -557,6 +557,16 @@
          (loop (node-left node))
          (loop (node-right node))]))
     
+    
+    ;; The maximum and minimum should be correct
+    (unless (eq? (tree-first a-tree)
+                 (if (null? (tree-root a-tree)) null (maximum (tree-root a-tree))))
+      (error 'check-rb-structure "maximum is not first"))
+    (unless (eq? (tree-last a-tree)
+                 (if (null? (tree-root a-tree)) null (minimum (tree-root a-tree))))
+      (error 'check-rb-structure "maximum is not last"))
+    
+    
     ;; The left and right sides should be black-balanced, for all subtrees.
     (let loop ([node (tree-root a-tree)])
       (cond
@@ -577,7 +587,8 @@
                        observed-black-height (tree-black-height a-tree))))
     
     
-    ;; As should the overall height.
+    
+    ;; The overall height must be less than 2 lg(n+1)
     (define count (tree-node-count a-tree))
     (define observed-height (tree-height a-tree))
     (define (lg n) (/ (log n) (log 2)))
