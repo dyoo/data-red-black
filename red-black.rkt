@@ -310,19 +310,27 @@
     ;; deletion is merely replacing z with its other child.
     ;; (Of course, we then have to repair the damage.)
     [(null? (node-left z))
+     (define z.p (node-parent z))
      (define x (node-right z))
-     (transplant! a-tree z (node-right z))
-     (update-statistics-up-to-root! a-tree y)
+     (transplant! a-tree z x)
+     ;; At this point, we need to repair the statistic where
+     ;; where the replacement happened, since z's been replaced with x.
+     ;; The x subtree is ok, so we need to begin the statistic repair
+     ;; at z.p.
+     (when (not (null? z.p))
+       (update-statistics-up-to-root! a-tree z.p))
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
     [(null? (node-right z))
+     (define z.p (node-parent z))
      (define x (node-left z))
-     (transplant! a-tree z (node-left z))
-     (update-statistics-up-to-root! a-tree y)
+     (transplant! a-tree z x)
+     (when (not (null? z.p))
+       (update-statistics-up-to-root! a-tree z.p))
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x))]
     [else
-     ;; The harder case is when z has non-null left and right.
+     ;; The hardest case is when z has non-null left and right.
      ;; We take the minimum of z's right subtree and replace
      ;; z with it.
      (let* ([y (minimum (node-right z))]
@@ -332,11 +340,10 @@
        (cond
          [(eq? (node-parent y) z)
           ;; In CLRS, this is steps 12 and 13 of RB-DELETE.  However,
-          ;; the assignment is a no-op!  By definition, x is already
-          ;; y's child, so setting the parent point does nothing.
-          (void)
-          #;(unless (null? x) 
-              (set-node-parent! x y))]
+          ;; the assignment "x.p = y" is a no-op!
+          ;; By definition, x is already y's child, so setting
+          ;; the parent pointer does nothing.
+          (void)]
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
