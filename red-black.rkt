@@ -67,8 +67,8 @@
 (define nil (let ([v (node #f 0 0 #f #f #f black)])
               (set-node-parent! v v)
               (set-node-left! v v)
-              (set-node-right! v v)))
-
+              (set-node-right! v v)
+              v))
 (define-syntax-rule (nil? x) (eq? x nil))
 
 
@@ -432,7 +432,7 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-right w-2) black)
                      (left-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree) nil)])]
+                     (loop (tree-root a-tree))])]
              
              [else 
               (define w (node-left (node-parent x)))
@@ -460,7 +460,7 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-left w-2) black)
                      (right-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree) nil)])])]
+                     (loop (tree-root a-tree))])])]
           [else
            (unless (nil? x)
              (set-node-color! x black))])))
