@@ -308,7 +308,7 @@
   (cond
     
     ;; If either the left or right child of z is null,
-    ;; deletion is merely replacing z with its other child.
+    ;; deletion is merely replacing z with its other child x.
     ;; (Of course, we then have to repair the damage.)
     [(null? (node-left z))
      (define z.p (node-parent z))
@@ -336,6 +336,7 @@
      (transplant! a-tree z x)
      (when (not (null? z.p))
        (update-statistics-up-to-root! a-tree z.p))
+
      (when (eq? black y-original-color)
        (fix-after-delete! a-tree x z.p))]
     
@@ -355,20 +356,29 @@
           ;; the sentinel NIL node that CLRS uses.
           ;; By definition, x is already y's child, so setting
           ;; the parent pointer should do nothing.
-          (void)]
+          (transplant! a-tree z y)
+          (set-node-left! y (node-left z))
+          (unless (null? (node-left y)) 
+            (set-node-parent! (node-left y) y))
+          (set-node-color! y (node-color z))
+          (update-statistics-up-to-root! a-tree y)
+          
+          (when (eq? black y-original-color)
+            (fix-after-delete! a-tree x y))]
          [else
           (transplant! a-tree y (node-right y))
           (set-node-right! y (node-right z))
           (unless (null? (node-right y))
-            (set-node-parent! (node-right y) y))])
-       (transplant! a-tree z y)
-       (set-node-left! y (node-left z))
-       (unless (null? (node-left y)) 
-         (set-node-parent! (node-left y) y))
-       (set-node-color! y (node-color z))
-       (update-statistics-up-to-root! a-tree y)
-       (when (eq? black y-original-color)
-         (fix-after-delete! a-tree x y.p)))]))
+            (set-node-parent! (node-right y) y))
+          (transplant! a-tree z y)
+          (set-node-left! y (node-left z))
+          (unless (null? (node-left y)) 
+            (set-node-parent! (node-left y) y))
+          (set-node-color! y (node-color z))
+          (update-statistics-up-to-root! a-tree y)
+          
+          (when (eq? black y-original-color)
+            (fix-after-delete! a-tree x y.p))]))]))
 
 
 ;; transplant: tree node (U node null) -> void
@@ -388,6 +398,10 @@
 
 ;; fix-after-delete!: tree (U node null) (U node null) -> void
 (define (fix-after-delete! a-tree x x.p)
+  (unless (or (null? x.p)
+              (eq? x (node-left x.p))
+              (eq? x (node-right x.p)))
+    (error 'uh-oh!-3))
   (let loop ([x x]
              [x.p x.p])
     (cond [(and (not (eq? x (tree-root a-tree)))
@@ -404,7 +418,9 @@
                                  (node-right x.p)]
                                 [else
                                  w]))
-              (cond [(or (eq? (node-color (node-left w-1)) black)
+              (cond [(or (null? (node-left w-1))
+                         (null? (node-right w-1))
+                         (eq? (node-color (node-left w-1)) black)
                          (eq? (node-color (node-right w-1)) black))
                      (set-node-color! w-1 red)
                      (loop x.p (node-parent x.p))]
@@ -421,6 +437,7 @@
                      (set-node-color! (node-right w-2) black)
                      (left-rotate! a-tree x.p)
                      (loop (tree-root a-tree) null)])]
+
              [else
               (cond
                 [(eq? x (node-right x.p))
@@ -432,7 +449,9 @@
                                     (node-left x.p)]
                                    [else
                                     w]))
-                 (cond [(or (eq? (node-color (node-left w-1)) black)
+                 (cond [(or (null? (node-left w-1))
+                            (null? (node-right w-1))
+                            (eq? (node-color (node-left w-1)) black)
                             (eq? (node-color (node-right w-1)) black))
                         (set-node-color! w-1 red)
                         (loop x.p (node-parent x.p))]
