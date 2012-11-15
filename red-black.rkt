@@ -317,7 +317,7 @@
      (transplant! a-tree z (node-left z))
      (update-statistics-up-to-root! a-tree y)
      (when (eq? black y-original-color)
-       (fix-after-delete! tree x))]
+       (fix-after-delete! a-tree x))]
     [else
      (let* ([y (minimum (node-right z))]
             [y-original-color (node-color y)])
@@ -335,7 +335,7 @@
        (set-node-color! y (node-color z))
        (update-statistics-up-to-root! a-tree y)
        (when (eq? black y-original-color)
-         (fix-after-delete! tree x)))]))
+         (fix-after-delete! a-tree x)))]))
 
 
 ;; transplant: tree node (U node null) -> void
@@ -474,6 +474,7 @@
   (require rackunit 
            rackunit/text-ui
            racket/string
+           racket/list
            "test-data/all-words.rkt")
   
   
@@ -869,6 +870,52 @@
   
   
   
+  (define angry-monkey-test
+    (test-suite
+     "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
+     (test-begin
+      (define iterations 10)
+      (define known-model '())
+      (define (random-word)
+        (build-string (random 20) 
+                      (lambda (i) 
+                        (integer->char (+ (char->integer #\a) (random 26))))))
+
+      (define t (new-tree))
+      (for ([i (in-range iterations)])
+        (case (random 7)
+          [(0 1 2)
+           ;; insert at the front
+           (define new-word (random-word))
+           (printf "inserting ~s to front\n" new-word)
+           (set! known-model (cons new-word known-model))
+           (insert-first! t new-word (string-length new-word))]
+          [(3 4 5)
+           ;; insert at the back
+           (define new-word (random-word))
+           (printf "inserting ~s to back\n" new-word)
+           (set! known-model (append known-model (list new-word)))
+           (insert-last! t new-word (string-length new-word))]
+          [(6)
+           (when (not (empty? known-model))
+             ;; Delete a random word if we can.
+             (define k (random (length known-model)))
+             (printf "deleting ~s\n" (list-ref known-model k))
+             (define offset (for/fold ([offset 0]) ([i (in-range k)]
+                                                    [word (in-list known-model)])
+                              (+ offset (string-length word))))
+             (set! known-model (let-values ([(a b) (split-at known-model k)])
+                                 (append a (rest b))))
+             (delete! t (search t offset)))])
+
+        (check-rb-structure! t)
+        ;; Check that the structure is consistent with our model.
+        (check-equal? known-model (map first (tree-items t)))))))
+
+
+  
+  
+  
   ;; Stress test
   (define exhaustive-structure-test
     (test-suite
@@ -902,8 +949,10 @@
   
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
-        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
+                    angry-monkey-test)
+        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
+                    angry-monkey-test
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
