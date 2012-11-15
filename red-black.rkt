@@ -561,7 +561,7 @@
     ;; The maximum and minimum should be correct
     (unless (eq? (tree-first a-tree)
                  (if (null? (tree-root a-tree)) null (minimum (tree-root a-tree))))
-      (error 'check-rb-structure "maximum is not first"))
+      (error 'check-rb-structure "minimum is not first"))
     (unless (eq? (tree-last a-tree)
                  (if (null? (tree-root a-tree)) null (maximum (tree-root a-tree))))
       (error 'check-rb-structure "maximum is not last"))
