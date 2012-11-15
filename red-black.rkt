@@ -322,7 +322,6 @@
                    (define z.p (node-parent z))
                    (define x (node-right z))
                    (transplant! a-tree z x)
-                   
                    ;; At this point, we need to repair the statistic where
                    ;; where the replacement happened, since z's been replaced with x.
                    ;; The x subtree is ok, so we need to begin the statistic repair
@@ -347,10 +346,9 @@
                    (let* ([y (minimum (node-right z))]
                           [y-original-color (node-color y)])
                      ;; At this point, y's left is nil by definition of minimum.
-                     (define y.p (node-parent y))
                      (define x (node-right y))
                      (cond
-                       [(eq? y.p z)
+                       [(eq? (node-parent y) z)
                         ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
                         ;; Be aware that x here can be nil, in which case we've now
                         ;; changed the contents of nil.
@@ -925,35 +923,33 @@
       (void))))
   
   
-  
-  (define angry-monkey-test
-    (test-suite
-     "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
-     (test-begin
-      (define iterations 1000)
+  (define angry-monkey%
+    (class object%
+      (super-new)
       (define known-model '())
+      (define t (new-tree))
+      
       (define (random-word)
         (build-string (add1 (random 20))
                       (lambda (i) 
                         (integer->char (+ (char->integer #\a) (random 26))))))
+      (define/public (get-tree) t)
+      (define/public (get-model) known-model)
       
-      (define t (new-tree))
-      (for ([i (in-range iterations)])
-        (case (random 7)
-          [(0 1 2)
-           ;; insert at the front
-           (define new-word (random-word))
-           (printf "inserting ~s to front\n" new-word)
-           (set! known-model (cons new-word known-model))
-           (insert-first! t new-word (string-length new-word))]
-          [(3 4 5)
-           ;; insert at the back
-           (define new-word (random-word))
-           (printf "inserting ~s to back\n" new-word)
-           (set! known-model (append known-model (list new-word)))
-           (insert-last! t new-word (string-length new-word))]
-          [(6)
-           (when (not (empty? known-model))
+      (define/public (insert-front!)
+        (define new-word (random-word))
+        (printf "inserting ~s to front\n" new-word)
+        (set! known-model (cons new-word known-model))
+        (insert-first! t new-word (string-length new-word)))
+      
+      (define/public (insert-back!)
+        (define new-word (random-word))
+        (printf "inserting ~s to back\n" new-word)
+        (set! known-model (append known-model (list new-word)))
+        (insert-last! t new-word (string-length new-word)))
+      
+      (define/public (delete-random!)
+        (when (not (empty? known-model))
              ;; Delete a random word if we can.
              (define k (random (length known-model)))
              (printf "deleting ~s\n" (list-ref known-model k))
@@ -962,12 +958,28 @@
                               (+ offset (string-length word))))
              (set! known-model (let-values ([(a b) (split-at known-model k)])
                                  (append a (rest b))))
-             (delete! t (search t offset)))])
+             (delete! t (search t offset))))))
+      
+  
+  (define angry-monkey-test
+    (test-suite
+     "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
+     (test-begin
+      (define iterations 1000)
+      (define m (new angry-monkey%))
+      (for ([i (in-range iterations)])
+        (case (random 7)
+          [(0 1 2)
+           (send m insert-front!)]
+          [(3 4 5)
+           (send m insert-back!)]
+          [(6)
+           (send m delete-random!)])
         
         ;; Check that the structure is consistent with our model.
-        (check-equal? known-model (map first (tree-items t)))
+        (check-equal? (send m get-model) (map first (tree-items (send m get-tree))))
         ;; And make sure it's still an rb-tree:
-        (check-rb-structure! t))
+        (check-rb-structure! (send m get-tree)))
       (printf "angry monkey is tired.\n"))))
   
   
