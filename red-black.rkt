@@ -843,9 +843,7 @@
       (check-rb-structure! t)
       (delete! t (search t 1))
       (check-rb-structure! t)
-      (displayln (tree->list t)) ;; before
       (delete! t (search t 0))
-      (displayln (tree->list t)) ;; after
       (check-rb-structure! t))))
   
   
@@ -965,7 +963,7 @@
       (define t (new-tree))
       
       (define (random-word)
-        (build-string (add1 (random 20))
+        (build-string (add1 (random 5))
                       (lambda (i) 
                         (integer->char (+ (char->integer #\a) (random 26))))))
       (define/public (get-tree) t)
@@ -973,13 +971,13 @@
       
       (define/public (insert-front!)
         (define new-word (random-word))
-        (printf "inserting ~s to front\n" new-word)
+        #;(printf "inserting ~s to front\n" new-word)
         (set! known-model (cons new-word known-model))
         (insert-first! t new-word (string-length new-word)))
       
       (define/public (insert-back!)
         (define new-word (random-word))
-        (printf "inserting ~s to back\n" new-word)
+        #;(printf "inserting ~s to back\n" new-word)
         (set! known-model (append known-model (list new-word)))
         (insert-last! t new-word (string-length new-word)))
       
@@ -987,12 +985,11 @@
         (when (not (empty? known-model))
           ;; Delete a random word if we can.
           (define k (random (length known-model)))
-          (printf "deleting ~s\n" (list-ref known-model k))
+          #;(printf "deleting ~s\n" (list-ref known-model k))
           (define offset (for/fold ([offset 0]) ([i (in-range k)]
                                                  [word (in-list known-model)])
                            (+ offset (string-length word))))
           (define node (search t offset))
-          (printf "found node: ~s\n" (node-data node))
           (delete! t node)
           (set! known-model (let-values ([(a b) (split-at known-model k)])
                               (append a (rest b))))))
@@ -1008,7 +1005,7 @@
     (test-suite
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
-      (define iterations 100)
+      (define iterations 1000)
       (define m (new angry-monkey%))
       (for ([i (in-range iterations)])
         (case (random 7)
@@ -1019,7 +1016,7 @@
           [(6)
            (send m delete-random!)])
         (send m check-consistency!))
-      (printf "angry monkey is tired.\n"))))
+      #;(printf "angry monkey is tired.\n"))))
   
   
   
