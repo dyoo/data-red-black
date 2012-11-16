@@ -1157,9 +1157,47 @@
       (insert-last! t2 "ago" 3)
       (define t1+t2 (concat! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("four" "score" "and" "seven" "years" "ago"))
-      (check-rb-structure! t1+t2))))
-  
-  
+      (check-rb-structure! t1+t2))
+     
+     
+     (test-case
+      "a bigger concatenation example.  Gettysburg Address, November 19, 1863."
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (define t3 (new-tree))
+      (define m1 "Four score and seven years ago our fathers
+                 brought forth on this continent a new nation,
+                 conceived in Liberty, and dedicated to the proposition
+                 that all men are created equal.")
+      (define m2 "Now we are engaged in a great civil war, testing
+                  whether that nation, or any nation so conceived and so dedicated,
+                  can long endure. We are met on a great battle-field of that war.
+                  We have come to dedicate a portion of that field, as a final 
+                  resting place for those who here gave their lives that that nation 
+                  might live. It is altogether fitting and proper that we should do this.")
+      (define m3 "But, in a larger sense, we can not dedicate -- we can not consecrate
+                  -- we can not hallow -- this ground. The brave men, living and dead,
+                  who struggled here, have consecrated it, far above our poor power to 
+                  add or detract. The world will little note, nor long remember what we
+                  say here, but it can never forget what they did here. It is for us the living,
+                  rather, to be dedicated here to the unfinished work which they who fought here
+                  have thus far so nobly advanced. It is rather for us to be here dedicated to
+                  the great task remaining before us -- that from these honored dead we take 
+                  increased devotion to that cause for which they gave the last full measure 
+                  of devotion -- that we here highly resolve that these dead shall not have died 
+                  in vain -- that this nation, under God, shall have a new birth of freedom --
+                  and that government of the people, by the people, for the people, 
+                  shall not perish from the earth.")
+      (for ([word (in-list (string-split m1))])
+        (insert-last! t1 word (string-length word)))      
+      (for ([word (in-list (string-split m2))])
+        (insert-last! t2 word (string-length word)))
+      (for ([word (in-list (string-split m3))])
+        (insert-last! t3 word (string-length word)))
+      (define speech-tree (concat! (concat! t1 t2) t3))
+      (check-equal? (map first (tree-items speech-tree))
+                    (string-split (string-append m1 " " m2 " " m3)))
+      (check-rb-structure! speech-tree))))
   
   
   (define dict-words-tests
