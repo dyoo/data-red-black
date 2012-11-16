@@ -62,7 +62,7 @@
               first ;; node     optimization: Points to the first element.
               last  ;; node     optimization: Points to the last element.
               bh)   ;; natural  optimization: the black height of the entire tree.
-              #:mutable)
+  #:mutable)
 
 
 (struct node (data          ;; Any
@@ -275,7 +275,7 @@
     [else    
      (define y (minimum (node-right after)))
      (set-node-left! y x)])
-    
+  
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
@@ -414,7 +414,7 @@
     ;; After all this is done, just force nil's parent to be itself again
     ;; (just in case it got munged during delete)
     (set-node-parent! nil nil)))
-  
+
 
 
 
@@ -500,7 +500,7 @@
            (when (and (eq? x (tree-root a-tree))
                       (black? x)
                       (not early-escape?))
-               (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
+             (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
            
            (unless (nil? x)
              (set-node-color! x black))])))
@@ -619,7 +619,7 @@
               (loop (node-right n) (sub1 current-height))])]
       [else
        (loop (node-right n) current-height)])))
-    
+
 
 ;; find-leftmost-black-node-with-bh: tree positive-integer -> node
 ;; Finds the rightmost black node with the particular black height we're looking for.
@@ -761,11 +761,11 @@
     (define observed-black-height (node-count-black (tree-root a-tree)))
     ;; The observed black height should equal that of the recorded one
     (unless (= (tree-bh a-tree) observed-black-height)
-        (error 'check-rb-structure
-               (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
-                       observed-black-height 
-                       (tree-bh a-tree)
-                       (tree->list a-tree))))
+      (error 'check-rb-structure
+             (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
+                     observed-black-height 
+                     (tree-bh a-tree)
+                     (tree->list a-tree))))
     
     
     
@@ -794,7 +794,7 @@
                   (+ left-subtree-size right-subtree-size (node-self-width n))
                   (node-subtree-width n)))
          (+ left-subtree-size right-subtree-size (node-self-width n))])))
-
+  
   
   
   ;; tree->list: tree -> list
@@ -856,7 +856,7 @@
   (define insertion-tests
     (test-suite
      "Insertion tests"
-
+     
      (test-case "small beginnings"
                 (define t (new-tree))
                 (insert-last! t "small world" 11)
@@ -909,7 +909,7 @@
       (check-true (black? the-root))
       (check-equal? (node-subtree-width the-root) 5)
       (check-true (red? (node-right the-root)))
-                    
+      
       (check-rb-structure! t))
      
      (test-begin 
@@ -1132,7 +1132,7 @@
       (define t1+t2 (concat! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "peace"))
       (check-rb-structure! t1+t2))
-
+     
      (test-case
       "appending 1-2"
       (define t1 (new-tree))
@@ -1158,8 +1158,8 @@
       (define t1+t2 (concat! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("four" "score" "and" "seven" "years" "ago"))
       (check-rb-structure! t1+t2))))
-
-    
+  
+  
   
   
   (define dict-words-tests
@@ -1195,65 +1195,65 @@
   (define angry-monkey%
     (let ()
       (define-local-member-name catch-and-concat-at-front)
-    (class object%
-      (super-new)
-      (define known-model '())
-      (define t (new-tree))
-      
-      (define (random-word)
-        (build-string (add1 (random 5))
-                      (lambda (i) 
-                        (integer->char (+ (char->integer #\a) (random 26))))))
-      (define/public (get-tree) t)
-      (define/public (get-model) known-model)
-      
-      (define/public (insert-front!)
-        (define new-word (random-word))
-        #;(printf "inserting ~s to front\n" new-word)
-        (set! known-model (cons new-word known-model))
-        (insert-first! t new-word (string-length new-word)))
-      
-      (define/public (insert-back!)
-        (define new-word (random-word))
-        #;(printf "inserting ~s to back\n" new-word)
-        (set! known-model (append known-model (list new-word)))
-        (insert-last! t new-word (string-length new-word)))
-      
-      (define/public (delete-kth! k)
-        #;(printf "deleting ~s\n" (list-ref known-model k))
-        (define offset (for/fold ([offset 0]) ([i (in-range k)]
-                                               [word (in-list known-model)])
-                         (+ offset (string-length word))))
-        (define node (search t offset))
-        (delete! t node)
-        (set! known-model (let-values ([(a b) (split-at known-model k)])
-                            (append a (rest b)))))
+      (class object%
+        (super-new)
+        (define known-model '())
+        (define t (new-tree))
         
-      (define/public (delete-random!)
-        (when (not (empty? known-model))
-          ;; Delete a random word if we can.
-          (define k (random (length known-model)))
-          (delete-kth! k)))
-
-     
-      ;; Concatenation.  Drop our existing tree and throw it at the other.
-      (define/public (throw-at-monkey m2)
-        (send m2 catch-and-concat-at-front t known-model)
-        (set! t (new-tree))
-        (set! known-model '()))
-
-      ;; private
-      (define/public (catch-and-concat-at-front other-t other-known-model)
-        (set! t (concat! other-t t))
-        (set! known-model (append other-known-model known-model)))
-
-      
-      (define/public (check-consistency!)
-        ;; Check that the structure is consistent with our model.
-        (check-equal? (map first (tree-items t)) known-model)
-        ;; And make sure it's still an rb-tree:
-        (check-rb-structure! t)))))
-      
+        (define (random-word)
+          (build-string (add1 (random 5))
+                        (lambda (i) 
+                          (integer->char (+ (char->integer #\a) (random 26))))))
+        (define/public (get-tree) t)
+        (define/public (get-model) known-model)
+        
+        (define/public (insert-front!)
+          (define new-word (random-word))
+          #;(printf "inserting ~s to front\n" new-word)
+          (set! known-model (cons new-word known-model))
+          (insert-first! t new-word (string-length new-word)))
+        
+        (define/public (insert-back!)
+          (define new-word (random-word))
+          #;(printf "inserting ~s to back\n" new-word)
+          (set! known-model (append known-model (list new-word)))
+          (insert-last! t new-word (string-length new-word)))
+        
+        (define/public (delete-kth! k)
+          #;(printf "deleting ~s\n" (list-ref known-model k))
+          (define offset (for/fold ([offset 0]) ([i (in-range k)]
+                                                 [word (in-list known-model)])
+                           (+ offset (string-length word))))
+          (define node (search t offset))
+          (delete! t node)
+          (set! known-model (let-values ([(a b) (split-at known-model k)])
+                              (append a (rest b)))))
+        
+        (define/public (delete-random!)
+          (when (not (empty? known-model))
+            ;; Delete a random word if we can.
+            (define k (random (length known-model)))
+            (delete-kth! k)))
+        
+        
+        ;; Concatenation.  Drop our existing tree and throw it at the other.
+        (define/public (throw-at-monkey m2)
+          (send m2 catch-and-concat-at-front t known-model)
+          (set! t (new-tree))
+          (set! known-model '()))
+        
+        ;; private
+        (define/public (catch-and-concat-at-front other-t other-known-model)
+          (set! t (concat! other-t t))
+          (set! known-model (append other-known-model known-model)))
+        
+        
+        (define/public (check-consistency!)
+          ;; Check that the structure is consistent with our model.
+          (check-equal? (map first (tree-items t)) known-model)
+          ;; And make sure it's still an rb-tree:
+          (check-rb-structure! t)))))
+  
   
   
   (define angry-monkey-test-1
@@ -1292,7 +1292,7 @@
             [(4 5 6)
              (send m delete-random!)])
           (send m check-consistency!))))))
-        
+  
   (define angry-monkey-pair-test
     (test-suite
      "Simulation of a pair of angry monkeys bashing at the tree.  Occasionally they'll throw things at each other."
@@ -1345,11 +1345,11 @@
            (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t) )
            #;(check-rb-structure! t))
          (insert-last! t word (string-length word))))
-
+      
       (collect-garbage)
       (collect-garbage)
       (collect-garbage)
-
+      
       ;; deletion
       (printf "dropping all those words...\n")
       (time
@@ -1359,7 +1359,7 @@
            (printf "deleting ~s words; tree bh=~s\n" i (tree-bh t))
            #;(check-rb-structure! t))
          (delete! t (tree-first t))))
-
+      
       (check-rb-structure! t)
       (check-equal? (tree-root t) nil)
       
@@ -1370,7 +1370,7 @@
       (collect-garbage)
       (collect-garbage)
       (collect-garbage)
-
+      
       (printf "inserting ~s words at the front...\n" (length (force all-words)))
       (time
        (for ([word (in-list (force all-words))]
