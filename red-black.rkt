@@ -3,6 +3,9 @@
 
 ;; Implementation of an augmented red-black tree, where extra
 ;; information supports position-based queries.
+;;
+;; Author: Danny Yoo (dyoo@hashcollision.org)
+;;
 ;; 
 ;; The usage case of this structure is to maintain an ordered sequence
 ;; of items.  Each item has an internal length.  We want to support
@@ -11,6 +14,7 @@
 ;; These operations are typical of an editor's buffer, which must maintain
 ;; a sequence of tokens in order, allowing for arbitrary search, insert, and delete
 ;; into the sequence.
+;;
 ;;
 ;; We follow the basic outline for order-statistic trees described in
 ;; CLRS.  In our case, each node remembers the total width of the
@@ -21,6 +25,13 @@
 ;;     Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
+;;
+;;
+;; This module has test cases in a test submodule below.
+;;
+;; Use: 
+;;     raco test red-black.rkt to execute these tests.
+;;
 
 
 (provide tree?
@@ -287,16 +298,16 @@
             [else
              (define y (node-left z.p.p))
              (cond [(red? y)
-                    (set-node-color! z.p black) ; fixme: write test to verify this
-                    (set-node-color! y black)   ; fixme: write test to verify this
-                    (set-node-color! z.p.p red) ; fixme: write test to verify this
+                    (set-node-color! z.p black)
+                    (set-node-color! y black)
+                    (set-node-color! z.p.p red)
                     (loop z.p.p)]
                    [else
                     (cond [(eq? z (node-left z.p))
                            (let ([new-z z.p])
                              (right-rotate! a-tree new-z)
-                             (set-node-color! (node-parent new-z) black) ; fixme: write test to verify this
-                             (set-node-color! (node-parent (node-parent new-z)) red) ; fixme: write test to verify this
+                             (set-node-color! (node-parent new-z) black)
+                             (set-node-color! (node-parent (node-parent new-z)) red)
                              (left-rotate! a-tree 
                                            (node-parent (node-parent new-z)))
                              (loop new-z))]
