@@ -253,12 +253,12 @@
   (let loop ([z z])
     (define z.p (node-parent z))
     (when (and (not (nil? z.p))
-               (eq? (node-color z.p) red))
+               (red? z.p))
       (define z.p.p (node-parent z.p))
       (cond [(eq? z.p (node-left z.p.p))
              (define y (node-right z.p.p))
              (cond [(and (not (nil? y))
-                         (eq? (node-color y) red))
+                         (red? y))
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
@@ -279,7 +279,7 @@
             [else
              (define y (node-left z.p.p))
              (cond [(and (not (nil? y))
-                         (eq? (node-color y) red))
+                         (red? y))
                     (set-node-color! z.p black) ; fixme: write test to verify this
                     (set-node-color! y black)   ; fixme: write test to verify this
                     (set-node-color! z.p.p red) ; fixme: write test to verify this
@@ -394,7 +394,7 @@
 (define (fix-after-delete! a-tree x)
   (let loop ([x x])
     (cond [(and (not (eq? x (tree-root a-tree)))
-                (eq? (node-color x) black))
+                (black? x))
            (cond
              [(eq? x (node-left (node-parent x)))
               (define w (node-right (node-parent x)))
@@ -405,12 +405,11 @@
                                  (node-right (node-parent x))]
                                 [else
                                  w]))
-              (cond [(and (eq? (node-color (node-left w-1)) black)
-                          (eq? (node-color (node-right w-1)) black))
+              (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
-                     (define w-2 (cond [(eq? (node-color (node-right w-1)) black)
+                     (define w-2 (cond [(black? (node-right w-1))
                                         (set-node-color! (node-left w-1) black)
                                         (set-node-color! w-1 red)
                                         (right-rotate! a-tree w-1)
@@ -424,19 +423,18 @@
                      (loop (tree-root a-tree))])]
              [else
               (define w (node-left (node-parent x)))
-              (define w-1 (cond [(eq? (node-color w) red)
+              (define w-1 (cond [(red? w)
                                  (set-node-color! w black)
                                  (set-node-color! (node-parent x) red)
                                  (right-rotate! a-tree (node-parent x))
                                  (node-left (node-parent x))]
                                 [else
                                  w]))
-              (cond [(and (eq? (node-color (node-left w-1)) black)
-                          (eq? (node-color (node-right w-1)) black))
+              (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
                      (loop (node-parent x))]
                     [else
-                     (define w-2 (cond [(eq? (node-color (node-left w-1)) black)
+                     (define w-2 (cond [(black? (node-left w-1))
                                         (set-node-color! (node-right w-1) black)
                                         (set-node-color! w-1 red)
                                         (left-rotate! a-tree w-1)
@@ -572,10 +570,10 @@
          acc]
         [else
          (define right-count (loop (node-right a-node)
-                                   (+ (if (eq? black (node-color a-node)) 1 0)
+                                   (+ (if (black? a-node) 1 0)
                                       acc)))
          (define left-count  (loop (node-left a-node) 
-                                   (+ (if (eq? black (node-color a-node)) 1 0)
+                                   (+ (if (black? a-node) 1 0)
                                       acc)))
          (unless (= right-count left-count)
            (error 'node-count-black "~a vs ~a" right-count left-count))
@@ -596,9 +594,9 @@
       (cond
         [(nil? node)
          (void)]
-        [(eq? red (color node))
-         (when (or (eq? red (color (node-left node)))
-                   (eq? red (color (node-right node))))
+        [(red? node)
+         (when (or (red? (node-left node))
+                   (red? (node-right node)))
            (error 'check-rb-structure "rb violation: two reds are adjacent"))
          (loop (node-left node))
          (loop (node-right node))]))
@@ -759,11 +757,10 @@
       (define the-root (tree-root t))
       (check-equal? (node-left the-root)
                     nil)
-      (check-equal? (node-color the-root)
-                    black)
+      (check-true (black? the-root))
       (check-equal? (node-subtree-width the-root) 5)
-      (check-equal? (node-color (node-right the-root))
-                    red)
+      (check-true (red? (node-right the-root)))
+                    
       (check-rb-structure! t))
      
      (test-begin 
@@ -778,10 +775,9 @@
                     "bye")
       (check-equal? (node-data (node-right the-root))
                     "again")
-      (check-equal? (node-color the-root)
-                    black)
-      (check-equal? (node-color (node-left the-root)) red)
-      (check-equal? (node-color (node-right the-root)) red)
+      (check-true (black? the-root))
+      (check-true (red? (node-left the-root)))
+      (check-true (red? (node-right the-root)))
       (check-equal? (node-subtree-width the-root) 10)
       (check-rb-structure! t))))
   
