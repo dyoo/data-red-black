@@ -475,7 +475,6 @@
            (unless (nil? x)
              (when (and (eq? x (tree-root a-tree))
                         (not early-escape?))
-               (displayln "--")
                (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
              (set-node-color! x black))])))
 
@@ -707,7 +706,13 @@
                (loop (node-right node)))])))
   
   
-  
+  (define nil-tests
+    (test-suite
+     "check properties of nil"
+     (test-case
+      "nil tree should be consistent"
+      (define t (new-tree))
+      (check-rb-structure! t))))
   
   (define rotation-tests
     (test-suite 
@@ -1095,7 +1100,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
-           #;(check-rb-structure! t))
+           (check-rb-structure! t))
          (insert-last! t word (string-length word))))
 
       (collect-garbage)
@@ -1109,7 +1114,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "deleting ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
-           #;(check-rb-structure! t))
+           (check-rb-structure! t))
          (delete! t (tree-first t))))
 
       (check-rb-structure! t)
@@ -1129,7 +1134,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
-           #;(check-rb-structure! t))
+           (check-rb-structure! t))
          (insert-first! t word (string-length word)))))))
   
   
@@ -1137,9 +1142,9 @@
   
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
-        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
+        (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test angry-monkey-test-2)
-        (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
+        (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test angry-monkey-test-2
                     dict-words-tests
                     exhaustive-structure-test)))
