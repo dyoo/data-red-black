@@ -1083,7 +1083,6 @@
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
-          (displayln i)
           (case (random 7)
             [(0 1)
              (send m insert-front!)]
