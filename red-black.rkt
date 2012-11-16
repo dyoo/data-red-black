@@ -1298,7 +1298,7 @@
      "Simulation of a pair of angry monkeys bashing at the tree.  Occasionally they'll throw things at each other."
      (test-begin
       (define number-of-operations 1000)
-      (define number-of-iterations 10)
+      (define number-of-iterations 100)
       (for ([i (in-range number-of-iterations)])
         (define m1 (new angry-monkey%))
         (define m2 (new angry-monkey%))
