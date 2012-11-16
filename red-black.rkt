@@ -538,6 +538,29 @@
 
 
 
+;; concat!: tree tree -> tree
+;; Destructively concatenates trees t1 and t2, and
+;; returns a tree that represents the join.
+(define (concat! t1 t2)
+  (cond
+    [(nil? (tree-root t1))
+     t2]
+    [(nil? (tree-root t2))
+     t1]
+    [else
+     (define x (tree-last t2))
+     (delete! t2 x)
+     (cond
+       [(>= (tree-bh t1) (tree-bh t2))
+        ;; fixme
+        t1]
+       [else
+        ;; fixme
+        t2])]))
+         
+
+  
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -981,6 +1004,48 @@
       (check-equal? (node-data (search t 34)) "system"))))
   
   
+  (define concat-tests
+    (test-suite
+     "concat tests"
+     (test-case 
+      "empty case"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (define t1+t2 (concat! t1 t2))
+      (check-true (nil? (tree-root t1+t2)))
+      (check-rb-structure! t1+t2))
+     
+     (test-case 
+      "left is empty"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t2 "hello" 5)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2))
+                    '("hello"))
+      (check-rb-structure! t1+t2))
+     
+     (test-case 
+      "right is empty"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t1 "hello" 5)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2))
+                    '("hello"))
+      (check-rb-structure! t1+t2))
+     
+     (test-case
+      "two single trees"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t1 "hello" 5)
+      (insert-last! t2 "world" 5)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2)) '("hello world"))
+      (check-rb-structure! t1+t2))))
+
+  
   
   (define dict-words-tests
     (test-suite
@@ -1162,8 +1227,10 @@
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
+                    concat-tests
                     angry-monkey-test angry-monkey-test-2)
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
+                    concat-tests
                     angry-monkey-test angry-monkey-test-2
                     dict-words-tests
                     exhaustive-structure-test)))
