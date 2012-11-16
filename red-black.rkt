@@ -265,6 +265,25 @@
   (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
+;; insert-after!: tree dat width -> void
+;; Insert x after element 'after' of the tree.
+(define (insert-after! a-tree after x)
+  (cond
+    [(nil? (node-right x))
+     (set-node-right! after x)
+     (set-node-parent! x after)]
+    [else    
+     (define y (minimum (node-right after)))
+     (set-node-left! y x)])
+    
+  (set-node-color! x red)
+  (when (eq? after (tree-last a-tree))
+    (set-tree-last! a-tree x))
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+
 
 ;; fix-after-insert!: tree node natural -> void
 ;; INTERNAL
@@ -550,13 +569,17 @@
     [else
      ;; First, remove element x from t2.  x will act as the
      ;; splicing point.
-     (define x (tree-last t2))
+     (define x (tree-first t2))
      (delete! t2 x)
      
      (define t1-bh (tree-bh t1))
      (define t2-bh (tree-bh t2))
      (cond
+       [(nil? (tree-root t2))
+        (insert-after! t1 (tree-last t1) x)
+        t1]
        [(>= t1-bh t2-bh)
+        (set-tree-last! t1 (tree-last t2))
         (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
         (define b (tree-root t2))
         (transplant! t1 a x)
@@ -569,6 +592,7 @@
         (fix-after-insert! t1 x)
         t1]
        [else
+        (set-tree-first! t2 (tree-first t1))
         (define a (tree-root t1))
         (define b (find-leftmost-black-node-with-bh t2 t1-bh))
         (transplant! t2 b x)
@@ -1091,11 +1115,39 @@
       "two single trees"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "hello" 5)
-      (insert-last! t2 "world" 5)
+      (insert-last! t1 "append" 5)
+      (insert-last! t2 "this" 4)
       (define t1+t2 (concat! t1 t2))
-      (check-equal? (map first (tree-items t1+t2)) '("hello world"))
-      (check-rb-structure! t1+t2))))
+      (check-equal? (map first (tree-items t1+t2)) '("append" "this"))
+      (check-rb-structure! t1+t2))
+     
+     
+     (test-case
+      "appending 2-1"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t1 "love" 4)
+      (insert-last! t1 "and" 3)
+      (insert-last! t2 "peace" 5)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2)) '("love" "and" "peace"))
+      (check-rb-structure! t1+t2))
+
+     (test-case
+      "appending 1-2"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t1 "love" 4)
+      (insert-last! t2 "and" 3)
+      (insert-last! t2 "war" 3)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2)) '("love" "and" "war"))
+      (check-rb-structure! t1+t2))
+
+     
+     
+     
+     ))
 
   
   
