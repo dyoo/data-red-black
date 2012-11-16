@@ -248,7 +248,7 @@
   (fix-after-insert! a-tree x))
 
 
-;; insert-first!: tree dat width -> void
+;; insert-first!: tree data width -> void
 ;; Insert before the first element of the tree.
 (define (insert-first! a-tree data width)
   (define x (node data width width nil nil nil red))
@@ -265,8 +265,11 @@
   (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
-;; insert-after!: tree dat width -> void
-;; Insert x after element 'after' of the tree.
+
+
+;; insert-after!: tree node node -> void
+;; Insert node x after element 'after' of the tree.
+;; x will be the immmediate successor of after upon completion.
 (define (insert-after! a-tree after x)
   (cond
     [(nil? (node-right x))
@@ -1166,9 +1169,9 @@
       (define t2 (new-tree))
       (define t3 (new-tree))
       (define m1 "Four score and seven years ago our fathers
-                 brought forth on this continent a new nation,
-                 conceived in Liberty, and dedicated to the proposition
-                 that all men are created equal.")
+                  brought forth on this continent a new nation,
+                  conceived in Liberty, and dedicated to the proposition
+                  that all men are created equal.")
       (define m2 "Now we are engaged in a great civil war, testing
                   whether that nation, or any nation so conceived and so dedicated,
                   can long endure. We are met on a great battle-field of that war.
