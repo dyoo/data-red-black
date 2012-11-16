@@ -58,10 +58,11 @@
 (define black 'black)
 
 
-(struct tree (root  ;; node    The root node of the tree.
-              first ;; node    optimization: Points to the first element.
-              last) ;; node    optimization: Points to the last element.
-  #:mutable)
+(struct tree (root  ;; node     The root node of the tree.
+              first ;; node     optimization: Points to the first element.
+              last  ;; node     optimization: Points to the last element.
+              bh)   ;; natural  optimization: the black height of the entire tree.
+              #:mutable)
 
 
 (struct node (data          ;; Any
@@ -104,7 +105,7 @@
 ;; new-tree: -> tree
 ;; Creates a fresh tree.
 (define (new-tree)
-  (tree nil nil nil))
+  (tree nil nil nil 0))
 
 
 ;; minimum: node -> node
@@ -317,7 +318,7 @@
                            (left-rotate! a-tree z.p.p)
                            (loop z)])])])))
   (when (red? (tree-root a-tree))
-    (displayln "++"))
+    (set-tree-bh! a-tree (add1 (tree-bh a-tree))))
   (set-node-color! (tree-root a-tree) black))
 
 
@@ -474,7 +475,8 @@
            (unless (nil? x)
              (when (and (eq? x (tree-root a-tree))
                         (not early-escape?))
-               (displayln "--"))
+               (displayln "--")
+               (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
              (set-node-color! x black))])))
 
 
@@ -652,10 +654,12 @@
          (loop (node-right node))]))
     (define observed-black-height (node-count-black (tree-root a-tree)))
     ;; The observed black height should equal that of the recorded one
-    #;(unless (= (tree-black-height a-tree) observed-black-height)
+    (unless (= (tree-bh a-tree) observed-black-height)
         (error 'check-rb-structure
-               (format "rb violation: observed height ~a is not equal to recorded height ~a"
-                       observed-black-height (tree-black-height a-tree))))
+               (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
+                       observed-black-height 
+                       (tree-bh a-tree)
+                       (tree->list a-tree))))
     
     
     
