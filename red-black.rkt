@@ -69,6 +69,7 @@
               (set-node-left! v v)
               (set-node-right! v v)
               v))
+
 (define-syntax-rule (nil? x) (eq? x nil))
 
 
@@ -140,9 +141,10 @@
 ;; Assuming the node-subtree-width of the left and right are
 ;; correct, computes the subtree-width of n.
 ;; Note: this does not trust the local cache in (node-subtree-width n).
-(define-syntax-rule (computed-node-subtree-width n)
-  (let ([left (node-left n)]
-        [right (node-right n)])
+(define (computed-node-subtree-width a-node)
+  (let* ([n a-node]
+         [left (node-left n)]
+         [right (node-right n)])
     (+ (if (nil? left)
            0 
            (node-subtree-width left))
@@ -219,7 +221,7 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-statistics-up-to-root! a-tree x)
+  (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -237,7 +239,7 @@
      (set-node-left! first x)
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
-  (update-statistics-up-to-root! a-tree x)
+  (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -456,22 +458,23 @@
 ;;
 ;; * The subtree width field of a-node and its ancestors should be updated.
 (define (update-statistics-up-to-root! a-tree a-node)
-  (let loop ([a-node a-node])
+  (let loop ([n a-node])
     (cond
-      [(nil? a-node)
+      [(nil? n)
        (void)]
       [else
-       (set-node-subtree-width! a-node (computed-node-subtree-width a-node))
-       (loop (node-parent a-node))])))
+       (set-node-subtree-width! n (computed-node-subtree-width n))
+       (loop (node-parent n))])))
 
 
-;; subtree-width: (U node nil) -> natural
+;; subtree-width: node -> natural
 ;; INTERNAL
 ;; Return the subtree width of the tree rooted at n.
-(define-syntax-rule (subtree-width n)
-  (if (nil? n)
-      0
-      (node-subtree-width n)))
+(define (subtree-width a-node)
+  (let ([n a-node])
+    (if (nil? n)
+        0
+        (node-subtree-width n))))
 
 
 ;; search: tree natural -> (U node nil)
@@ -576,6 +579,7 @@
          (unless (= right-count left-count)
            (error 'node-count-black "~a vs ~a" right-count left-count))
          right-count])))
+  
   
   
   ;; check-rb-structure!: tree -> void
@@ -1005,18 +1009,20 @@
     (test-suite
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
-      (define iterations 1000)
-      (define m (new angry-monkey%))
-      (for ([i (in-range iterations)])
-        (case (random 7)
-          [(0 1 2)
-           (send m insert-front!)]
-          [(3 4 5)
-           (send m insert-back!)]
-          [(6)
-           (send m delete-random!)])
-        (send m check-consistency!))
-      #;(printf "angry monkey is tired.\n"))))
+      (define number-of-operations 1000)
+      (define number-of-iterations 5)
+      (for ([i (in-range number-of-iterations)])
+        (define m (new angry-monkey%))
+        (for ([i (in-range number-of-operations)])
+          (case (random 7)
+            [(0 1 2)
+             (send m insert-front!)]
+            [(3 4 5)
+             (send m insert-back!)]
+            [(6)
+             (send m delete-random!)])
+          (send m check-consistency!))
+        #;(printf "angry monkey is tired.\n")))))
   
   
   
@@ -1030,6 +1036,8 @@
       (printf "Timing construction of /usr/share/dict/words:\n")
       (define t (new-tree))
       (collect-garbage)
+      ;; insertion
+      (printf "inserting ~s words at the end...\n" (length (force all-words)))
       (time
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
@@ -1037,11 +1045,27 @@
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
            (check-rb-structure! t))
          (insert-last! t word (string-length word))))
+
+      (collect-garbage)
+      ;; deletion
+      (printf "dropping all those words...\n")
+      (time
+       (for ([word (in-list (force all-words))]
+             [i (in-naturals)])
+         (when (= 1 (modulo i 10000))
+           (printf "deleting ~snth word; tree height=~s\n" i (tree-height t))
+           (check-rb-structure! t))
+         (delete! t (tree-first t))))
+
+      (check-rb-structure! t)
+      (check-equal? (tree-root t) nil)
+      
       ;; Be aware that the GC may make the following with insert-front! might make
       ;; it look like the first time we build the tree, it's faster than the
       ;; second time around.
       ;; The explicit calls to collect-garbage here are just to eliminate that effect.
       (collect-garbage)
+      (printf "inserting ~s words at the front...\n" (length (force all-words)))
       (time
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
@@ -1054,7 +1078,7 @@
   
   
   (define all-tests
-    (if #t    ;; Fixme: is there a good way to change this at runtime using raco test?
+    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
                     angry-monkey-test)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
@@ -1062,4 +1086,5 @@
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
+   (printf "Running test suite.\nWarning: this suite runs slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
