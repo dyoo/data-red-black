@@ -474,10 +474,15 @@
                      (loop (tree-root a-tree) 
                            #t)])])]
           [else
+           ;; When we get to this point, if x is at the root
+           ;; and still black, we are discarding the double-black
+           ;; color, which means the height of the tree should be
+           ;; decremented.
            (when (and (eq? x (tree-root a-tree))
                       (black? x)
                       (not early-escape?))
                (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
+           
            (unless (nil? x)
              (set-node-color! x black))])))
 
