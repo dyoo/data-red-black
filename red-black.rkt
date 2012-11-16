@@ -662,9 +662,55 @@
              [else
               (loop (node-left node) (sub1 current-height))])]
       [else
-       (loop (node-left node) current-height)])))  
+       (loop (node-left node) current-height)])))
 
 
+;; split: tree node -> (values tree tree)
+;; Partitions the tree into two tree: the predecessors of x, and the successors of x.
+(define (split a-tree x)
+  (let loop ([x x]
+             [x.p (node-parent x)]
+             [L (node->tree (node-left x))]
+             [R (node->tree (node-right x))])
+    (cond
+      [(nil? x)
+       (values L R)]
+      [(eq? x (node-left x.p))
+       (loop x.p 
+             (node-parent x.p) 
+             (concat! R 
+                      x 
+                      (node->tree (node-right x))))]
+      [else
+       (loop x.p 
+             (node-parent x.p) 
+             (concat! (node->tree (node-left x))
+                      x 
+                      L))])))
+
+
+;; node->tree: node -> tree
+(define (node->tree a-node)
+  (set-node-color! a-node black)
+  (tree a-node
+        (minimum a-node)
+        (maximum a-node)
+        (computed-black-height a-node)))
+
+
+;; computed-black-height: node -> natural
+(define (computed-black-height x)
+  (let loop ([x x]
+             [acc 0])
+    (cond
+      [(nil? x)
+       0]
+      [else
+       (define right (node-right x))
+       (cond [(black? x)
+              (loop right (add1 acc))]
+             [else
+              (loop right acc)])])))
 
 
 
@@ -1227,6 +1273,21 @@
       (check-equal? (map first (tree-items speech-tree))
                     (string-split (string-append m1 " " m2 " " m3)))
       (check-rb-structure! speech-tree))))
+
+  (define split-tests
+    (test-suite
+     "splitting"
+     (test-case
+      "(a b c) ---split-b--> (a) (c)"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (define-values (l r) (split t (search t 1)))
+      (check-rb-structure! l)
+      (check-rb-structure! r)
+      (check-equal? (map first (tree-items l)) '("a"))
+      (check-equal? (map first (tree-items r)) '("c")))))
   
   
   (define dict-words-tests
