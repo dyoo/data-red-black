@@ -548,18 +548,70 @@
     [(nil? (tree-root t2))
      t1]
     [else
+     ;; First, remove element x from t2.  x will act as the
+     ;; splicing point.
      (define x (tree-last t2))
      (delete! t2 x)
+     
+     (define t1-bh (tree-bh t1))
+     (define t2-bh (tree-bh t2))
      (cond
-       [(>= (tree-bh t1) (tree-bh t2))
-        ;; fixme
+       [(>= t1-bh t2-bh)
+        (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
+        (define b (tree-root t2))
+        (transplant! t1 a x)
+        (set-node-color! x red)
+        (set-node-left! x a)
+        (set-node-parent! a x)
+        (set-node-right! x b)
+        (set-node-parent! b x)
+        (update-statistics-up-to-root! t1 x)
+        (fix-after-insert! t1 x)
         t1]
        [else
-        ;; fixme
+        (define a (tree-root t1))
+        (define b (find-leftmost-black-node-with-bh t2 t1-bh))
+        (transplant! t2 b x)
+        (set-node-color! x red)
+        (set-node-left! x a)
+        (set-node-parent! a x)
+        (set-node-right! x b)
+        (set-node-parent! b x)
+        (update-statistics-up-to-root! t2 x)
+        (fix-after-insert! t2 x)
         t2])]))
-         
 
-  
+
+;; find-rightmost-black-node-with-bh: tree positive-integer -> node
+;; Finds the rightmost black node with the particular black height we're looking for.
+(define (find-rightmost-black-node-with-bh a-tree bh)
+  (let loop ([n (tree-root a-tree)]
+             [current-height (tree-bh a-tree)])
+    (cond
+      [(black? n)
+       (cond [(= bh current-height)
+              n]
+             [else
+              (loop (node-right n) (sub1 current-height))])]
+      [else
+       (loop (node-right n) current-height)])))
+    
+
+;; find-leftmost-black-node-with-bh: tree positive-integer -> node
+;; Finds the rightmost black node with the particular black height we're looking for.
+(define (find-leftmost-black-node-with-bh a-tree bh)
+  (let loop ([node node]
+             [current-height (tree-bh a-tree)])
+    (cond
+      [(black? node)
+       (cond [(= bh current-height)
+              node]
+             [else
+              (loop (node-left node) (sub1 current-height))])]
+      [else
+       (loop (node-left node) current-height)])))  
+
+
 
 
 
