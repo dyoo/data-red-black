@@ -1020,7 +1020,7 @@
      "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
      (test-begin
       (define number-of-operations 1000)
-      (define number-of-iterations 5)
+      (define number-of-iterations 10)
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
@@ -1039,7 +1039,7 @@
      "Another simulation of an angry monkey bashing at the tree. (more likely to delete)"
      (test-begin
       (define number-of-operations 1000)
-      (define number-of-iterations 5)
+      (define number-of-iterations 10)
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
@@ -1074,7 +1074,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-           (check-rb-structure! t))
+           #;(check-rb-structure! t))
          (insert-last! t word (string-length word))))
 
       (collect-garbage)
@@ -1088,7 +1088,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "deleting ~snth word; tree height=~s\n" i (tree-height t))
-           (check-rb-structure! t))
+           #;(check-rb-structure! t))
          (delete! t (tree-first t))))
 
       (check-rb-structure! t)
@@ -1108,7 +1108,7 @@
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
-           (check-rb-structure! t))
+           #;(check-rb-structure! t))
          (insert-first! t word (string-length word)))))))
   
   
