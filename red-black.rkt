@@ -43,8 +43,8 @@
 
 ;; First, our data structures:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define red 'red)
-(define black 'black)
+(define red 0)
+(define black 1)
 
 
 (struct tree (root  ;; node    The root node of the tree.
@@ -71,8 +71,12 @@
               v))
 
 (define-syntax-rule (nil? x) (eq? x nil))
-(define-syntax-rule (red? x) (eq? (node-color x) red))
-(define-syntax-rule (black? x) (eq? (node-color x) black))
+(define-syntax-rule (red? x) 
+  (let ([v x]) 
+    (if (eq? v nil) #f (eq? (node-color v) red))))
+(define-syntax-rule (black? x) 
+  (let ([v x]) 
+    (if (eq? v nil) #t (eq? (node-color v) black))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -671,7 +675,7 @@
          (list (format "~a:~a:~a" 
                        (node-data node)
                        (node-subtree-width node)
-                       (node-color node))
+                       (if (black? node) "black" "red"))
                (loop (node-left node))
                (loop (node-right node)))])))
   
