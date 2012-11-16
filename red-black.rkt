@@ -71,7 +71,8 @@
               v))
 
 (define-syntax-rule (nil? x) (eq? x nil))
-
+(define-syntax-rule (red? x) (eq? (node-color x) red))
+(define-syntax-rule (black? x) (eq? (node-color x) black))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
