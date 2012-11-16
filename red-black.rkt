@@ -316,6 +316,8 @@
                            (set-node-color! z.p.p red)
                            (left-rotate! a-tree z.p.p)
                            (loop z)])])])))
+  (when (red? (tree-root a-tree))
+    (displayln "++"))
   (set-node-color! (tree-root a-tree) black))
 
 
@@ -469,6 +471,8 @@
                      (loop (tree-root a-tree))])])]
           [else
            (unless (nil? x)
+             (when (eq? x (tree-root a-tree))
+               (displayln "--"))
              (set-node-color! x black))])))
 
 
@@ -1084,7 +1088,7 @@
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (printf "loaded ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
            #;(check-rb-structure! t))
          (insert-last! t word (string-length word))))
 
@@ -1098,7 +1102,7 @@
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
-           (printf "deleting ~s words; tree height=~s\n" i (tree-height t))
+           (printf "deleting ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
            #;(check-rb-structure! t))
          (delete! t (tree-first t))))
 
@@ -1118,7 +1122,7 @@
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree height=~s\n" i (tree-height t))
+           (printf "loaded ~s words; tree height=~s; bh=~s\n" i (tree-height t) (node-count-black (tree-root t)))
            #;(check-rb-structure! t))
          (insert-first! t word (string-length word)))))))
   
