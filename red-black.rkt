@@ -1143,12 +1143,23 @@
       (define t1+t2 (concat! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "war"))
       (check-rb-structure! t1+t2))
+     
+     
+     (test-case
+      "appending 3-3"
+      (define t1 (new-tree))
+      (define t2 (new-tree))
+      (insert-last! t1 "four" 4)
+      (insert-last! t1 "score" 5)
+      (insert-last! t1 "and" 3)
+      (insert-last! t2 "seven" 5)
+      (insert-last! t2 "years" 5)
+      (insert-last! t2 "ago" 3)
+      (define t1+t2 (concat! t1 t2))
+      (check-equal? (map first (tree-items t1+t2)) '("four" "score" "and" "seven" "years" "ago"))
+      (check-rb-structure! t1+t2))))
 
-     
-     
-     
-     ))
-
+    
   
   
   (define dict-words-tests
@@ -1182,6 +1193,8 @@
   
   
   (define angry-monkey%
+    (let ()
+      (define-local-member-name catch-and-concat-at-front)
     (class object%
       (super-new)
       (define known-model '())
@@ -1221,17 +1234,31 @@
           ;; Delete a random word if we can.
           (define k (random (length known-model)))
           (delete-kth! k)))
+
+     
+      ;; Concatenation.  Drop our existing tree and throw it at the other.
+      (define/public (throw-at-monkey m2)
+        (send m2 catch-and-concat-at-front t known-model)
+        (set! t (new-tree))
+        (set! known-model '()))
+
+      ;; private
+      (define/public (catch-and-concat-at-front other-t other-known-model)
+        (set! t (concat! other-t t))
+        (set! known-model (append other-known-model known-model)))
+
       
       (define/public (check-consistency!)
         ;; Check that the structure is consistent with our model.
         (check-equal? (map first (tree-items t)) known-model)
         ;; And make sure it's still an rb-tree:
-        (check-rb-structure! t))))
+        (check-rb-structure! t)))))
       
   
-  (define angry-monkey-test
+  
+  (define angry-monkey-test-1
     (test-suite
-     "Simulation of an angry monkey bashing at the tree, inserting and deleting at random."
+     "A simulation of an angry monkey bashing at the tree."
      (test-begin
       (define number-of-operations 1000)
       (define number-of-iterations 10)
@@ -1266,7 +1293,35 @@
              (send m delete-random!)])
           (send m check-consistency!))))))
         
-  
+  (define angry-monkey-pair-test
+    (test-suite
+     "Simulation of a pair of angry monkeys bashing at the tree.  Occasionally they'll throw things at each other."
+     (test-begin
+      (define number-of-operations 1000)
+      (define number-of-iterations 10)
+      (for ([i (in-range number-of-iterations)])
+        (define m1 (new angry-monkey%))
+        (define m2 (new angry-monkey%))
+        (for ([i (in-range number-of-operations)])
+          (define random-monkey (= 0 (random 2) m1 m2))
+          (case (random 9)
+            [(0 1 2)
+             (send random-monkey insert-front!)
+             (send random-monkey check-consistency!)]
+            [(3 4 5)
+             (send random-monkey insert-back!)
+             (send random-monkey check-consistency!)]
+            [(6)
+             (send random-monkey delete-random!)
+             (send random-monkey check-consistency!)]
+            [(7)
+             (send m1 throw-at-monkey m2)
+             (send m1 check-consistency!)
+             (send m2 check-consistency!)]
+            [(8)
+             (send m2 throw-at-monkey m1)
+             (send m1 check-consistency!)
+             (send m2 check-consistency!)]))))))
   
   
   
@@ -1332,10 +1387,10 @@
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
                     concat-tests
-                    angry-monkey-test angry-monkey-test-2)
+                    angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test)
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
                     concat-tests
-                    angry-monkey-test angry-monkey-test-2
+                    angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
