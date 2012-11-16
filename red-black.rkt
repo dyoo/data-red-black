@@ -415,7 +415,8 @@
 
 ;; fix-after-delete!: tree node -> void
 (define (fix-after-delete! a-tree x)
-  (let loop ([x x])
+  (let loop ([x x]
+             [early-escape? #f])
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (black? x))
            (cond
@@ -430,7 +431,7 @@
                                  w]))
               (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
-                     (loop (node-parent x))]
+                     (loop (node-parent x) #f)]
                     [else
                      (define w-2 (cond [(black? (node-right w-1))
                                         (set-node-color! (node-left w-1) black)
@@ -443,7 +444,7 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-right w-2) black)
                      (left-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree))])]
+                     (loop (tree-root a-tree) #t)])]
              [else
               (define w (node-left (node-parent x)))
               (define w-1 (cond [(red? w)
@@ -455,7 +456,7 @@
                                  w]))
               (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
-                     (loop (node-parent x))]
+                     (loop (node-parent x) #f)]
                     [else
                      (define w-2 (cond [(black? (node-left w-1))
                                         (set-node-color! (node-right w-1) black)
@@ -468,10 +469,11 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-left w-2) black)
                      (right-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree))])])]
+                     (loop (tree-root a-tree) #t)])])]
           [else
            (unless (nil? x)
-             (when (eq? x (tree-root a-tree))
+             (when (and (eq? x (tree-root a-tree))
+                        (not early-escape?))
                (displayln "--"))
              (set-node-color! x black))])))
 
