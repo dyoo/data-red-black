@@ -43,8 +43,8 @@
 
 ;; First, our data structures:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define red 0)
-(define black 1)
+(define red 'red)
+(define black 'black)
 
 
 (struct tree (root  ;; node    The root node of the tree.
@@ -70,13 +70,19 @@
               (set-node-right! v v)
               v))
 
+;; nil?: node -> boolean
+;; Tell us if we're at the distinguished nil node.
 (define-syntax-rule (nil? x) (eq? x nil))
+
+;; red?: node -> boolean
+;; Is the node red?
 (define-syntax-rule (red? x) 
-  (let ([v x]) 
-    (if (eq? v nil) #f (eq? (node-color v) red))))
+  (eq? (node-color x) red))
+
+;; black?: node -> boolean
+;; Is the node black?
 (define-syntax-rule (black? x) 
-  (let ([v x]) 
-    (if (eq? v nil) #t (eq? (node-color v) black))))
+  (eq? (node-color x) black))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -256,13 +262,11 @@
 (define (fix-after-insert! a-tree z)
   (let loop ([z z])
     (define z.p (node-parent z))
-    (when (and (not (nil? z.p))
-               (red? z.p))
+    (when (red? z.p)
       (define z.p.p (node-parent z.p))
       (cond [(eq? z.p (node-left z.p.p))
              (define y (node-right z.p.p))
-             (cond [(and (not (nil? y))
-                         (red? y))
+             (cond [(red? y)
                     (set-node-color! z.p black)
                     (set-node-color! y black)
                     (set-node-color! z.p.p red)
@@ -282,8 +286,7 @@
                            (loop z)])])]
             [else
              (define y (node-left z.p.p))
-             (cond [(and (not (nil? y))
-                         (red? y))
+             (cond [(red? y)
                     (set-node-color! z.p black) ; fixme: write test to verify this
                     (set-node-color! y black)   ; fixme: write test to verify this
                     (set-node-color! z.p.p red) ; fixme: write test to verify this
@@ -374,7 +377,10 @@
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x)]
           [else
-           (void)])))
+           (void)])
+    ;; After all this is done, just force nil's parent to be itself again
+    ;; (just in case it got munged during delete)
+    (set-node-parent! nil nil)))
   
 
 
@@ -473,7 +479,7 @@
 ;; subtree-width: node -> natural
 ;; INTERNAL
 ;; Return the subtree width of the tree rooted at n.
-(define (subtree-width a-node)
+(define-syntax-rule (subtree-width a-node)
   (let ([n a-node])
     (if (nil? n)
         0
@@ -1037,6 +1043,8 @@
       (printf "Timing construction of /usr/share/dict/words:\n")
       (define t (new-tree))
       (collect-garbage)
+      (collect-garbage)
+      (collect-garbage)
       ;; insertion
       (printf "inserting ~s words at the end...\n" (length (force all-words)))
       (time
@@ -1048,6 +1056,9 @@
          (insert-last! t word (string-length word))))
 
       (collect-garbage)
+      (collect-garbage)
+      (collect-garbage)
+
       ;; deletion
       (printf "dropping all those words...\n")
       (time
@@ -1066,6 +1077,9 @@
       ;; second time around.
       ;; The explicit calls to collect-garbage here are just to eliminate that effect.
       (collect-garbage)
+      (collect-garbage)
+      (collect-garbage)
+
       (printf "inserting ~s words at the front...\n" (length (force all-words)))
       (time
        (for ([word (in-list (force all-words))]
