@@ -474,10 +474,11 @@
                      (loop (tree-root a-tree) 
                            #t)])])]
           [else
-           (unless (nil? x)
-             (when (and (eq? x (tree-root a-tree))
-                        (not early-escape?))
+           (when (and (eq? x (tree-root a-tree))
+                      (black? x)
+                      (not early-escape?))
                (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
+           (unless (nil? x)
              (set-node-color! x black))])))
 
 
@@ -751,6 +752,12 @@
   (define insertion-tests
     (test-suite
      "Insertion tests"
+
+     (test-case "small beginnings"
+                (define t (new-tree))
+                (insert-last! t "small world" 11)
+                (check-rb-structure! t))
+     
      (test-begin
       (define t (new-tree))
       (insert-last! t "foobar" 6)
