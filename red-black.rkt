@@ -1277,6 +1277,39 @@
   (define split-tests
     (test-suite
      "splitting"
+     
+     (test-case
+      "(a) ---split-a--> () ()"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (define-values (l r) (split t (search t 0)))
+      (check-rb-structure! l)
+      (check-rb-structure! r)
+      (check-equal? (map first (tree-items l)) '())
+      (check-equal? (map first (tree-items r)) '()))
+     
+     (test-case
+      "(a b) ---split-a--> () (b)"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (define-values (l r) (split t (search t 0)))
+      (check-rb-structure! l)
+      (check-rb-structure! r)
+      (check-equal? (map first (tree-items l)) '())
+      (check-equal? (map first (tree-items r)) '("b")))
+     
+     (test-case
+      "(a b) ---split-b--> (a) ()"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (define-values (l r) (split t (search t 1)))
+      (check-rb-structure! l)
+      (check-rb-structure! r)
+      (check-equal? (map first (tree-items l)) '("a"))
+      (check-equal? (map first (tree-items r)) '()))
+     
      (test-case
       "(a b c) ---split-b--> (a) (c)"
       (define t (new-tree))
@@ -1287,7 +1320,20 @@
       (check-rb-structure! l)
       (check-rb-structure! r)
       (check-equal? (map first (tree-items l)) '("a"))
-      (check-equal? (map first (tree-items r)) '("c")))))
+      (check-equal? (map first (tree-items r)) '("c")))
+
+     
+     (test-case
+      "(a ... z) ---split-m--> (a ... l) (n ...z)"
+      (define t (new-tree))
+      (for ([i (in-range 26)])
+        (insert-last! t (string (integer->char (+ i (char->integer #\a))))
+                      1))
+      (define-values (l r) (split t (search t 12)))
+      (check-rb-structure! l)
+      (check-rb-structure! r)
+      (check-equal? (map first (tree-items l)) '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"))
+      (check-equal? (map first (tree-items r)) '("n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z")))))
   
   
   (define dict-words-tests
