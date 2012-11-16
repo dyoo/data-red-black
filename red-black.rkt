@@ -445,7 +445,8 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-right w-2) black)
                      (left-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree) #t)])]
+                     (loop (tree-root a-tree) 
+                           #t)])]
              [else
               (define w (node-left (node-parent x)))
               (define w-1 (cond [(red? w)
@@ -470,7 +471,8 @@
                      (set-node-color! (node-parent x) black)
                      (set-node-color! (node-left w-2) black)
                      (right-rotate! a-tree (node-parent x))
-                     (loop (tree-root a-tree) #t)])])]
+                     (loop (tree-root a-tree) 
+                           #t)])])]
           [else
            (unless (nil? x)
              (when (and (eq? x (tree-root a-tree))
@@ -828,7 +830,8 @@
       (define t (new-tree))
       (insert-first! t "hello" 5)
       (delete! t (tree-root t))
-      (check-equal? (tree-root t) nil))
+      (check-equal? (tree-root t) nil)
+      (check-rb-structure! t))
      
      (test-case
       "Deleting the last node in a tree: first and last should be nil"
@@ -836,7 +839,8 @@
       (insert-first! t "hello" 5)
       (delete! t (tree-root t))
       (check-equal? (tree-first t) nil)
-      (check-equal? (tree-last t) nil))
+      (check-equal? (tree-last t) nil)
+      (check-rb-structure! t))
      
      (test-case
       "Delete the last node in a two-node tree: basic structure"
@@ -846,7 +850,8 @@
       (delete! t (node-right (tree-root t)))
       (check-equal? (node-data (tree-root t)) "dresden")
       (check-equal? (node-left (tree-root t)) nil)
-      (check-equal? (node-right (tree-root t)) nil))
+      (check-equal? (node-right (tree-root t)) nil)
+      (check-rb-structure! t))
      
      (test-case
       "Delete the last node in a two-node tree: check the subtree-width has been updated"
@@ -854,7 +859,8 @@
       (insert-last! t "dresden" 6)
       (insert-last! t "files" 5)
       (delete! t (node-right (tree-root t)))
-      (check-equal? (node-subtree-width (tree-root t)) 6))
+      (check-equal? (node-subtree-width (tree-root t)) 6)
+      (check-rb-structure! t))
      
      (test-case
       "Delete the last node in a two-node tree: check that tree-first and tree-last are correct"
@@ -864,7 +870,8 @@
       (delete! t (node-right (tree-root t)))
       (check-true (node? (tree-root t)))
       (check-equal? (tree-first t) (tree-root t))
-      (check-equal? (tree-last t) (tree-root t)))
+      (check-equal? (tree-last t) (tree-root t))
+      (check-rb-structure! t))
      
      
      (test-case
@@ -1069,6 +1076,7 @@
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
+          (displayln i)
           (case (random 7)
             [(0 1)
              (send m insert-front!)]
