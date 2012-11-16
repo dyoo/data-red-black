@@ -266,6 +266,24 @@
   (fix-after-insert! a-tree x))
 
 
+;; insert-first-node!: tree node -> void
+;; Insert node x as the first element in the tree.
+(define (insert-first-node! a-tree x)
+  (set-node-color! x red)
+  (cond
+    [(nil? (tree-root a-tree))
+     (set-tree-root! a-tree x)
+     (set-tree-first! a-tree x)
+     (set-tree-last! a-tree x)]
+    [else
+     (define first (tree-first a-tree))
+     (set-node-left! first x)
+     (set-node-parent! x first)
+     (set-tree-first! a-tree x)])
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
 
 ;; insert-after!: tree node node -> void
 ;; Insert node x after element 'after' of the tree.
@@ -560,53 +578,61 @@
 
 
 
-;; concat!: tree tree -> tree
+;; join!: tree tree -> tree
 ;; Destructively concatenates trees t1 and t2, and
 ;; returns a tree that represents the join.
-(define (concat! t1 t2)
+(define (join! t1 t2)
   (cond
-    [(nil? (tree-root t1))
-     t2]
     [(nil? (tree-root t2))
      t1]
+    [(nil? (tree-root t1))
+     t2]
     [else
      ;; First, remove element x from t2.  x will act as the
-     ;; splicing point.
+     ;; pivot point.
      (define x (tree-first t2))
      (delete! t2 x)
-     
-     (define t1-bh (tree-bh t1))
-     (define t2-bh (tree-bh t2))
-     (cond
-       [(nil? (tree-root t2))
-        (insert-after! t1 (tree-last t1) x)
-        t1]
-       [(>= t1-bh t2-bh)
-        (set-tree-last! t1 (tree-last t2))
-        (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
-        (define b (tree-root t2))
-        (transplant! t1 a x)
-        (set-node-color! x red)
-        (set-node-left! x a)
-        (set-node-parent! a x)
-        (set-node-right! x b)
-        (set-node-parent! b x)
-        (update-statistics-up-to-root! t1 x)
-        (fix-after-insert! t1 x)
-        t1]
-       [else
-        (set-tree-first! t2 (tree-first t1))
-        (define a (tree-root t1))
-        (define b (find-leftmost-black-node-with-bh t2 t1-bh))
-        (transplant! t2 b x)
-        (set-node-color! x red)
-        (set-node-left! x a)
-        (set-node-parent! a x)
-        (set-node-right! x b)
-        (set-node-parent! b x)
-        (update-statistics-up-to-root! t2 x)
-        (fix-after-insert! t2 x)
-        t2])]))
+     ;; Next, delegate to the more general concat! function, using
+     ;; x as the pivot.
+     (concat! t1 x t2)]))
+
+
+;; concat!: tree node tree -> tree
+;; Joins t1, x and t2 together, using x as the pivot.
+(define (concat! t1 x t2)
+  (define t1-bh (tree-bh t1))
+  (define t2-bh (tree-bh t2))
+  (cond
+    [(nil? (tree-root t2))
+     (insert-after! t1 (tree-last t1) x)
+     t1]
+    [(>= t1-bh t2-bh)
+     (set-tree-last! t1 (tree-last t2))
+     (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
+     (define b (tree-root t2))
+     (transplant! t1 a x)
+     (set-node-color! x red)
+     (set-node-left! x a)
+     (set-node-parent! a x)
+     (set-node-right! x b)
+     (set-node-parent! b x)
+     (update-statistics-up-to-root! t1 x)
+     (fix-after-insert! t1 x)
+     t1]
+    [else
+     (set-tree-first! t2 (tree-first t1))
+     (define a (tree-root t1))
+     (define b (find-leftmost-black-node-with-bh t2 t1-bh))
+     (transplant! t2 b x)
+     (set-node-color! x red)
+     (set-node-left! x a)
+     (set-node-parent! a x)
+     (set-node-right! x b)
+     (set-node-parent! b x)
+     (update-statistics-up-to-root! t2 x)
+     (fix-after-insert! t2 x)
+     t2]))
+
 
 
 ;; find-rightmost-black-node-with-bh: tree positive-integer -> node
@@ -1090,7 +1116,7 @@
       "empty case"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-true (nil? (tree-root t1+t2)))
       (check-rb-structure! t1+t2))
      
@@ -1099,7 +1125,7 @@
       (define t1 (new-tree))
       (define t2 (new-tree))
       (insert-last! t2 "hello" 5)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2))
                     '("hello"))
       (check-rb-structure! t1+t2))
@@ -1109,7 +1135,7 @@
       (define t1 (new-tree))
       (define t2 (new-tree))
       (insert-last! t1 "hello" 5)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2))
                     '("hello"))
       (check-rb-structure! t1+t2))
@@ -1120,7 +1146,7 @@
       (define t2 (new-tree))
       (insert-last! t1 "append" 5)
       (insert-last! t2 "this" 4)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("append" "this"))
       (check-rb-structure! t1+t2))
      
@@ -1132,7 +1158,7 @@
       (insert-last! t1 "love" 4)
       (insert-last! t1 "and" 3)
       (insert-last! t2 "peace" 5)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "peace"))
       (check-rb-structure! t1+t2))
      
@@ -1143,7 +1169,7 @@
       (insert-last! t1 "love" 4)
       (insert-last! t2 "and" 3)
       (insert-last! t2 "war" 3)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "war"))
       (check-rb-structure! t1+t2))
      
@@ -1158,7 +1184,7 @@
       (insert-last! t2 "seven" 5)
       (insert-last! t2 "years" 5)
       (insert-last! t2 "ago" 3)
-      (define t1+t2 (concat! t1 t2))
+      (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("four" "score" "and" "seven" "years" "ago"))
       (check-rb-structure! t1+t2))
      
@@ -1197,7 +1223,7 @@
         (insert-last! t2 word (string-length word)))
       (for ([word (in-list (string-split m3))])
         (insert-last! t3 word (string-length word)))
-      (define speech-tree (concat! (concat! t1 t2) t3))
+      (define speech-tree (join! (join! t1 t2) t3))
       (check-equal? (map first (tree-items speech-tree))
                     (string-split (string-append m1 " " m2 " " m3)))
       (check-rb-structure! speech-tree))))
@@ -1285,7 +1311,7 @@
         
         ;; private
         (define/public (catch-and-concat-at-front other-t other-known-model)
-          (set! t (concat! other-t t))
+          (set! t (join! other-t t))
           (set! known-model (append other-known-model known-model)))
         
         
