@@ -624,7 +624,7 @@
 ;; find-leftmost-black-node-with-bh: tree positive-integer -> node
 ;; Finds the rightmost black node with the particular black height we're looking for.
 (define (find-leftmost-black-node-with-bh a-tree bh)
-  (let loop ([node node]
+  (let loop ([node (tree-root a-tree)]
              [current-height (tree-bh a-tree)])
     (cond
       [(black? node)
