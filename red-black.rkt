@@ -992,18 +992,21 @@
         (set! known-model (append known-model (list new-word)))
         (insert-last! t new-word (string-length new-word)))
       
+      (define/public (delete-kth! k)
+        #;(printf "deleting ~s\n" (list-ref known-model k))
+        (define offset (for/fold ([offset 0]) ([i (in-range k)]
+                                               [word (in-list known-model)])
+                         (+ offset (string-length word))))
+        (define node (search t offset))
+        (delete! t node)
+        (set! known-model (let-values ([(a b) (split-at known-model k)])
+                            (append a (rest b)))))
+        
       (define/public (delete-random!)
         (when (not (empty? known-model))
           ;; Delete a random word if we can.
           (define k (random (length known-model)))
-          #;(printf "deleting ~s\n" (list-ref known-model k))
-          (define offset (for/fold ([offset 0]) ([i (in-range k)]
-                                                 [word (in-list known-model)])
-                           (+ offset (string-length word))))
-          (define node (search t offset))
-          (delete! t node)
-          (set! known-model (let-values ([(a b) (split-at known-model k)])
-                              (append a (rest b))))))
+          (delete-kth! k)))
       
       (define/public (check-consistency!)
         ;; Check that the structure is consistent with our model.
@@ -1028,8 +1031,27 @@
              (send m insert-back!)]
             [(6)
              (send m delete-random!)])
-          (send m check-consistency!))
-        #;(printf "angry monkey is tired.\n")))))
+          (send m check-consistency!))))))
+  
+  
+  (define angry-monkey-test-2
+    (test-suite
+     "Another simulation of an angry monkey bashing at the tree. (more likely to delete)"
+     (test-begin
+      (define number-of-operations 1000)
+      (define number-of-iterations 5)
+      (for ([i (in-range number-of-iterations)])
+        (define m (new angry-monkey%))
+        (for ([i (in-range number-of-operations)])
+          (case (random 7)
+            [(0 1)
+             (send m insert-front!)]
+            [(2 3)
+             (send m insert-back!)]
+            [(4 5 6)
+             (send m delete-random!)])
+          (send m check-consistency!))))))
+        
   
   
   
@@ -1095,9 +1117,9 @@
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    angry-monkey-test)
+                    angry-monkey-test angry-monkey-test-2)
         (test-suite "all-tests" rotation-tests insertion-tests deletion-tests search-tests
-                    angry-monkey-test
+                    angry-monkey-test angry-monkey-test-2
                     dict-words-tests
                     exhaustive-structure-test)))
   (void
