@@ -1303,7 +1303,7 @@
         (define m1 (new angry-monkey%))
         (define m2 (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
-          (define random-monkey (= 0 (random 2) m1 m2))
+          (define random-monkey (if (= 0 (random 2)) m1 m2))
           (case (random 9)
             [(0 1 2)
              (send random-monkey insert-front!)
