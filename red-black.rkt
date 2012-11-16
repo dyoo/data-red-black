@@ -1087,7 +1087,7 @@
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
          (when (= 1 (modulo i 10000))
-           (printf "deleting ~snth word; tree height=~s\n" i (tree-height t))
+           (printf "deleting ~s words; tree height=~s\n" i (tree-height t))
            #;(check-rb-structure! t))
          (delete! t (tree-first t))))
 
