@@ -668,34 +668,45 @@
 ;; split: tree node -> (values tree tree)
 ;; Partitions the tree into two tree: the predecessors of x, and the successors of x.
 (define (split a-tree x)
+  (define x.bh (computed-black-height x))
   (let loop ([x x]
              [x.p (node-parent x)]
-             [L (node->tree (node-left x))]
-             [R (node->tree (node-right x))])
+             [x.bh x.bh]
+             [L (node->tree/bh (node-left x) 
+                               (if (black? x) (sub1 x.bh) x.bh))]
+             [R (node->tree/bh (node-right x) 
+                               (if (black? x) (sub1 x.bh) x.bh))])
     (cond
       [(nil? x)
        (values L R)]
       [(eq? x (node-left x.p))
        (loop x.p 
-             (node-parent x.p) 
+             (node-parent x.p)
+             (if (black? x) (sub1 x.bh) x.bh)
+             L
              (concat! R 
                       x 
-                      (node->tree (node-right x))))]
+                      (node->tree/bh (node-right x) x.bh)))]
       [else
        (loop x.p 
-             (node-parent x.p) 
-             (concat! (node->tree (node-left x))
+             (node-parent x.p)
+             (if (black? x) (sub1 x.bh) x.bh)
+             (concat! (node->tree/bh (node-left x) x.bh)
                       x 
-                      L))])))
+                      L)
+             R)])))
 
 
-;; node->tree: node -> tree
-(define (node->tree a-node)
-  (set-node-color! a-node black)
-  (tree a-node
-        (minimum a-node)
-        (maximum a-node)
-        (computed-black-height a-node)))
+;; node->tree/bh: node natural -> tree
+;; Create a node out of a tree, where we should already know the black
+;; height.
+(define (node->tree/bh a-node bh)
+  (let ([tree-bh (if (black? bh) bh (add1 bh))])
+    (set-node-color! a-node black)
+    (tree a-node
+          (minimum a-node)
+          (maximum a-node)
+          tree-bh)))
 
 
 ;; computed-black-height: node -> natural
@@ -1560,10 +1571,10 @@
   (define all-tests
     (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                    concat-tests
+                    concat-tests split-tests
                     angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test)
         (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                    concat-tests
+                    concat-tests split-tests
                     angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
                     dict-words-tests
                     exhaustive-structure-test)))
