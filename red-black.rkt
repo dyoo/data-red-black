@@ -49,6 +49,9 @@
          new-tree
          insert-first!
          insert-last!
+         insert-before!
+         insert-after!
+         
          delete!
          search)
 
