@@ -295,11 +295,32 @@
      (set-node-parent! x after)]
     [else    
      (define y (minimum (node-right after)))
-     (set-node-left! y x)])
+     (set-node-left! y x)
+     (set-node-parent! x y)])
   
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+;; insert-before!: tree node node -> void
+;; Insert node x before element 'before' of the tree.
+;; x will be the immmediate predecessor of before upon completion.
+(define (insert-before! a-tree before x)
+  (cond
+    [(nil? (node-left x))
+     (set-node-left! before x)
+     (set-node-parent! x before)]
+    [else    
+     (define y (maximum (node-left before)))
+     (set-node-right! y x)
+     (set-node-parent! x y)])
+  
+  (set-node-color! x red)
+  (when (eq? before (tree-first a-tree))
+    (set-tree-first! a-tree x))
   (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
@@ -603,12 +624,20 @@
   (define t1-bh (tree-bh t1))
   (define t2-bh (tree-bh t2))
   (cond
+    [(and (nil? (tree-root t1)) (nil? (tree-root t2)))
+     (insert-first-node! t1 x)
+     t1]
+
+    [(nil? (tree-root t1))
+     (insert-before! t2 (tree-first t2) x)
+     t2]
+    
     [(nil? (tree-root t2))
      (insert-after! t1 (tree-last t1) x)
      t1]
-    
+
     [(>= t1-bh t2-bh)
-     
+       
      (set-tree-last! t1 (tree-last t2))
      (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
      (define b (tree-root t2))
@@ -671,59 +700,55 @@
 ;; split: tree node -> (values tree tree)
 ;; Partitions the tree into two tree: the predecessors of x, and the successors of x.
 (define (split a-tree x)
-  (let loop ([x x]
-             [x.p (node-parent x)]
+  (let loop ([x (node-parent x)]
+             [leftward? (eq? (node-right (node-parent x))
+                             x)]
              [L (node->tree/bh (node-left x))]
              [R (node->tree/bh (node-right x))])
-    (printf "here in split\n")
     (cond
-      [(nil? x.p)
-       (printf "done\n")
+      [(nil? x)
        (values L R)]
-      [(eq? x (node-left x.p))
-       (printf "leftward: ~a\n" (node-data x))
-       (loop x.p 
-             (node-parent x.p)
-             L
-             (concat! R 
-                      x 
-                      (node->tree/bh (node-right x))))]
+      [leftward?
+       (loop (node-parent x)
+             (eq? (node-right (node-parent x)) x)
+             (concat! (node->tree/bh (node-left x)) x L)
+             R)]
       [else
-       (printf "rightward: ~a\n" (node-data x))
-       (loop x.p 
-             (node-parent x.p)
-             (concat! (node->tree/bh (node-left x))
-                      x 
-                      L)
-             R)])))
+       (loop (node-parent x) 
+             (eq? (node-right (node-parent x)) x)
+             L
+             (concat! R x (node->tree/bh (node-right x))))])))
+
 
 
 ;; node->tree/bh: node -> tree
 ;; Create a node out of a tree, where we should already know the black
 ;; height.
 (define (node->tree/bh a-node)
-  (set-node-color! a-node black)
-  (let ([tree-bh (computed-black-height a-node) #;(if (black? a-node) bh (add1 bh))])
-    (tree a-node
-          (minimum a-node)
-          (maximum a-node)
-          tree-bh)))
+  (cond
+    [(nil? a-node)
+     (new-tree)]
+    [else
+     (set-node-color! a-node black)
+     (let ([tree-bh (computed-black-height a-node)])
+       (tree a-node
+             (minimum a-node)
+             (maximum a-node)
+             tree-bh))]))
 
 
 ;; computed-black-height: node -> natural
 (define (computed-black-height x)
   (let loop ([x x]
              [acc 0])
-    (displayln "here")
     (cond
       [(nil? x)
        acc]
       [else
-       (define right (node-right x))
        (cond [(black? x)
-              (loop right (add1 acc))]
+              (loop (node-right x) (add1 acc))]
              [else
-              (loop right acc)])])))
+              (loop (node-right x) acc)])])))
 
 
 
@@ -828,10 +853,16 @@
     ;; The maximum and minimum should be correct
     (unless (eq? (tree-first a-tree)
                  (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
-      (error 'check-rb-structure "minimum is not first"))
+      (error 'check-rb-structure "in ~a, minimum (~a) is not first (~a)" 
+             (tree->list a-tree)
+             (node-data (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
+             (node-data (tree-first a-tree))))
     (unless (eq? (tree-last a-tree)
                  (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree))))
-      (error 'check-rb-structure "maximum is not last"))
+      (error 'check-rb-structure "in ~a, maximum (~a) is not last (~a)"
+             (tree->list a-tree)
+             (node-data (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree))))
+             (node-data (tree-last a-tree))))
     
     
     ;; The left and right sides should be black-balanced, for all subtrees.
@@ -1296,10 +1327,10 @@
       (define t (new-tree))
       (insert-last! t "a" 1)
       (define-values (l r) (split t (search t 0)))
-      (check-rb-structure! l)
-      (check-rb-structure! r)
       (check-equal? (map first (tree-items l)) '())
-      (check-equal? (map first (tree-items r)) '()))
+      (check-equal? (map first (tree-items r)) '())
+      (check-rb-structure! l)
+      (check-rb-structure! r))
      
      (test-case
       "(a b) ---split-a--> () (b)"
@@ -1307,10 +1338,10 @@
       (insert-last! t "a" 1)
       (insert-last! t "b" 1)
       (define-values (l r) (split t (search t 0)))
-      (check-rb-structure! l)
-      (check-rb-structure! r)
       (check-equal? (map first (tree-items l)) '())
-      (check-equal? (map first (tree-items r)) '("b")))
+      (check-equal? (map first (tree-items r)) '("b"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))
      
      (test-case
       "(a b) ---split-b--> (a) ()"
@@ -1318,22 +1349,22 @@
       (insert-last! t "a" 1)
       (insert-last! t "b" 1)
       (define-values (l r) (split t (search t 1)))
-      (check-rb-structure! l)
-      (check-rb-structure! r)
       (check-equal? (map first (tree-items l)) '("a"))
-      (check-equal? (map first (tree-items r)) '()))
+      (check-equal? (map first (tree-items r)) '())
+      (check-rb-structure! l)
+      (check-rb-structure! r))
      
-     #;(test-case
+     (test-case
       "(a b c) ---split-b--> (a) (c)"
       (define t (new-tree))
       (insert-last! t "a" 1)
       (insert-last! t "b" 1)
       (insert-last! t "c" 1)
       (define-values (l r) (split t (search t 1)))
-      (check-rb-structure! l)
-      (check-rb-structure! r)
       (check-equal? (map first (tree-items l)) '("a"))
-      (check-equal? (map first (tree-items r)) '("c")))
+      (check-equal? (map first (tree-items r)) '("c"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))
      
      #;(test-case
       "(a ... z) ---split-m--> (a ... l) (n ...z)"
@@ -1341,11 +1372,14 @@
       (for ([i (in-range 26)])
         (insert-last! t (string (integer->char (+ i (char->integer #\a))))
                       1))
-      (define-values (l r) (split t (search t 12)))
-      (check-rb-structure! l)
-      (check-rb-structure! r)
+      (define letter-m (search t 12))
+      (printf "trying to split\n")
+      (define-values (l r) (split t letter-m))
+      (printf "split done\n")
       (check-equal? (map first (tree-items l)) '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"))
-      (check-equal? (map first (tree-items r)) '("n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z")))))
+      (check-equal? (map first (tree-items r)) '("n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))))
   
   
   (define dict-words-tests
@@ -1353,15 +1387,18 @@
      "Working with a lot of words.  Insert and search tests."
      (test-begin
       (define t (new-tree))
-      
+      (printf "dict words test\n")
       (for ([word (in-list (force all-words))])
         (insert-last! t word (string-length word)))
       
+      (printf "checking structure\n")
       (check-rb-structure! t)
-      
+
+      (printf "searching\n")
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data (search t offset)) word)
-        (+ offset (string-length word))))
+        (+ offset (string-length word)))
+      (printf "done\n"))
      
      
      ;; Do it backwards
@@ -1369,12 +1406,13 @@
       (define t (new-tree))
       (for ([word (in-list (reverse (force all-words)))])
         (insert-first! t word (string-length word)))
-      
+      (printf "checking structure\n")
       (check-rb-structure! t)
-      
+      (printf "searching\n")
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data (search t offset)) word)
         (+ offset (string-length word)))
+      (printf "done\n")
       (void))))
   
   
@@ -1446,6 +1484,7 @@
     (test-suite
      "A simulation of an angry monkey bashing at the tree."
      (test-begin
+      (printf "monkey tests 1...\n")
       (define number-of-operations 100)
       (define number-of-iterations 100)
       (for ([i (in-range number-of-iterations)])
@@ -1465,6 +1504,7 @@
     (test-suite
      "Another simulation of an angry monkey bashing at the tree. (more likely to delete)"
      (test-begin
+      (printf "monkey tests 2...\n")
       (define number-of-operations 100)
       (define number-of-iterations 100)
       (for ([i (in-range number-of-iterations)])
@@ -1483,6 +1523,7 @@
     (test-suite
      "Simulation of a pair of angry monkeys bashing at the tree.  Occasionally they'll throw things at each other."
      (test-begin
+      (printf "monkey tests paired...\n")
       (define number-of-operations 100)
       (define number-of-iterations 100)
       (for ([i (in-range number-of-iterations)])
@@ -1507,7 +1548,8 @@
             [(8)
              (send m2 throw-at-monkey m1)
              (send m1 check-consistency!)
-             (send m2 check-consistency!)]))))))
+             (send m2 check-consistency!)])))
+      (printf "done\n"))))
   
   
   
