@@ -53,6 +53,8 @@
 
          insert-first/data!
          insert-last/data!
+         insert-before/data!
+         insert-after/data!
          
          delete!
          
@@ -124,27 +126,28 @@
 ;; Looks for the minimum element of the tree rooted at n.
 (define (minimum n)
   (let loop ([n n])
-    (define left (node-left n))
-    (cond
-      [(nil? left)
-       n]
-      [else
-       (loop left)])))
+       (define left (node-left n))
+       (cond
+         [(nil? left)
+          n]
+         [else
+          (loop left)])))
 
 ;; maximum: node -> node
 ;; Looks for the maximum element of the tree rooted at n.
 (define (maximum n)
   (let loop ([n n])
-    (define right (node-right n))
-    (cond
-      [(nil? right)
-       n]
-      [else
-       (loop right)])))
+       (define right (node-right n))
+       (cond
+         [(nil? right)
+          n]
+         [else
+          (loop right)])))
 
 
 ;; successor: node -> node
 ;; Given a node, walks to the successor node.
+;; If there is no successor, returns the nil node.
 (define (successor x)
   (cond [(not (nil? (node-right x)))
          (minimum (node-right x))]
@@ -159,6 +162,7 @@
 
 ;; predecessor: node -> node
 ;; Given a node, walks to the predecessor node.
+;; If there is no predecessor, returns the nil node.
 (define (predecessor x)
   (cond [(not (nil? (node-left x)))
          (maximum (node-left x))]
@@ -208,12 +212,6 @@
   (fix-after-insert! a-tree x))
 
 
-;; insert-first/data!: tree data width -> void
-;; Insert before the first element of the tree.
-(define (insert-first/data! a-tree data width)
-  (define x (node data width width nil nil nil red))
-  (insert-first! a-tree x))
-
 
 ;; insert-last!: tree node -> void
 ;; Insert node x as the last element in the tree.
@@ -229,33 +227,6 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
-;; insert-last/data!: tree data width -> void
-;; Insert after the last element in the tree.
-(define (insert-last/data! a-tree data width)
-  (define x (node data width width nil nil nil red))
-  (insert-last! a-tree x))
-
-
-;; insert-after!: tree node node -> void
-;; Insert node x after element 'after' of the tree.
-;; x will be the immmediate successor of after upon completion.
-(define (insert-after! a-tree after x)
-  (cond
-    [(nil? (node-right x))
-     (set-node-right! after x)
-     (set-node-parent! x after)]
-    [else    
-     (define y (minimum (node-right after)))
-     (set-node-left! y x)
-     (set-node-parent! x y)])
-  
-  (set-node-color! x red)
-  (when (eq? after (tree-last a-tree))
-    (set-tree-last! a-tree x))
   (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
 
@@ -278,6 +249,54 @@
     (set-tree-first! a-tree x))
   (update-statistics-up-to-root! a-tree (node-parent x))
   (fix-after-insert! a-tree x))
+
+
+;; insert-after!: tree node node -> void
+;; Insert node x after element 'after' of the tree.
+;; x will be the immmediate successor of after upon completion.
+(define (insert-after! a-tree after x)
+  (cond
+    [(nil? (node-right x))
+     (set-node-right! after x)
+     (set-node-parent! x after)]
+    [else    
+     (define y (minimum (node-right after)))
+     (set-node-left! y x)
+     (set-node-parent! x y)])
+  
+  (set-node-color! x red)
+  (when (eq? after (tree-last a-tree))
+    (set-tree-last! a-tree x))
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+;; insert-first/data!: tree data width -> void
+;; Insert before the first element of the tree.
+(define (insert-first/data! a-tree data width)
+  (define x (node data width width nil nil nil red))
+  (insert-first! a-tree x))
+
+
+;; insert-last/data!: tree data width -> void
+;; Insert after the last element in the tree.
+(define (insert-last/data! a-tree data width)
+  (define x (node data width width nil nil nil red))
+  (insert-last! a-tree x))
+
+
+;; insert-before/data!: tree data width -> void
+;; Insert before the first element of the tree.
+(define (insert-before/data! a-tree n data width)
+  (define x (node data width width nil nil nil red))
+  (insert-before! a-tree n x))
+
+
+;; insert-after/data!: tree node data width -> void
+;; Insert after the last element in the tree.
+(define (insert-after/data! a-tree n data width)
+  (define x (node data width width nil nil nil red))
+  (insert-after! a-tree n x))
 
 
 
@@ -877,8 +896,29 @@
   ;; tree-structure is as expected.  Note: this functions is
   ;; EXTRAORDINARILY expensive.  Do not use this outside of tests.
   (define (check-rb-structure! a-tree)
-    (define (color n)
-      (if (nil? n) black (node-color n)))
+   
+    ;; nil should always be black: algorithms depend on this!
+    (check-eq? (node-color nil) black)
+    
+    ;; The internal linkage between all the nodes should be consistent,
+    ;; and without cycles!
+    (let ([ht (make-hasheq)])
+      (let loop ([node (tree-root a-tree)])
+        (cond
+          [(nil? node)
+           (void)]
+          [else
+           (check-false (hash-has-key? ht node))
+           (hash-set! ht node #t)
+           (define left (node-left node))
+           (define right (node-right node))
+           (when (not (nil? left))
+             (check-eq? (node-parent left) node)
+             (loop left))
+           (when (not (nil? right))
+             (check-eq? (node-parent right) node)
+             (loop right))])))
+    
     
     ;; No two red nodes should be adjacent:
     (let loop ([node (tree-root a-tree)])
@@ -891,9 +931,9 @@
            (error 'check-rb-structure "rb violation: two reds are adjacent"))
          (loop (node-left node))
          (loop (node-right node))]))
+             
     
-    
-    ;; The maximum and minimum should be correct
+    ;; The maximum and minimum should be correctly linked as tree-last and tree-first, respectively:
     (unless (eq? (tree-first a-tree)
                  (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
       (error 'check-rb-structure "in ~a, minimum (~a) is not first (~a)" 
@@ -942,7 +982,7 @@
                      (* 2 (log (add1 count))))))
     
     
-    ;; The subtree widths should be consistent
+    ;; The subtree widths should be consistent:
     (let loop ([n (tree-root a-tree)])
       (cond
         [(nil? n)
@@ -1528,25 +1568,31 @@
         
         (define/public (insert-front!)
           (define new-word (random-word))
-          #;(printf "inserting ~s to front\n" new-word)
+          ;(printf "inserting ~s to front\n" new-word)
           (set! known-model (cons new-word known-model))
           (insert-first/data! t new-word (string-length new-word)))
         
         (define/public (insert-back!)
           (define new-word (random-word))
-          #;(printf "inserting ~s to back\n" new-word)
+          ;(printf "inserting ~s to back\n" new-word)
           (set! known-model (append known-model (list new-word)))
           (insert-last/data! t new-word (string-length new-word)))
         
         (define/public (delete-kth! k)
-          #;(printf "deleting ~s\n" (list-ref known-model k))
-          (define offset (for/fold ([offset 0]) ([i (in-range k)]
-                                                 [word (in-list known-model)])
-                           (+ offset (string-length word))))
+          ;(printf "deleting ~s\n" (list-ref known-model k))
+          (define offset (kth-offset k))
           (define node (search t offset))
           (delete! t node)
           (set! known-model (let-values ([(a b) (split-at known-model k)])
                               (append a (rest b)))))
+        
+        ;; kth-offset: natural -> natural
+        ;; Returns the offset of the kth word in the model.
+        (define (kth-offset k)
+          (for/fold ([offset 0]) ([i (in-range k)]
+                                                 [word (in-list known-model)])
+                           (+ offset (string-length word))))
+          
         
         (define/public (delete-random!)
           (when (not (empty? known-model))
@@ -1554,6 +1600,28 @@
             (define k (random (length known-model)))
             (delete-kth! k)))
         
+        (define/public (insert-before/random!)
+          (define k (random (length known-model)))
+          (define offset (kth-offset k))
+          (define node (search t offset))
+          (define new-word (random-word))
+          (printf "Inserting ~s before ~s\n" new-word (node-data node))
+          (insert-before/data! t node new-word (string-length new-word))
+          (set! known-model (append (take known-model k)
+                                    (list new-word)
+                                    (drop known-model k))))
+        
+        (define/public (insert-after/random!)
+          (define k (random (length known-model)))
+          (define offset (kth-offset k))
+          (define node (search t offset))
+          (define new-word (random-word))
+          (printf "Inserting ~s after ~s\n" new-word (node-data node))
+          (insert-after/data! t node new-word (string-length new-word))
+          (set! known-model (append (take known-model (add1 k))
+                                    (list new-word)
+                                    (drop known-model (add1 k)))))
+          
         
         ;; Concatenation.  Drop our existing tree and throw it at the other.
         (define/public (throw-at-monkey m2)
@@ -1585,12 +1653,16 @@
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
-          (case (random 7)
+          (case (random 12)
             [(0 1 2)
              (send m insert-front!)]
             [(3 4 5)
              (send m insert-back!)]
-            [(6)
+            [(6 7)
+             (send m insert-after/random!)]
+            [(8 9)
+             (send m insert-before/random!)]
+            [(10 11)
              (send m delete-random!)])
           (send m check-consistency!))))))
   
