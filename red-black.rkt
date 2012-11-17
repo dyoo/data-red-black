@@ -1700,12 +1700,12 @@
   
   (define all-tests
     (test-suite "all-tests" 
-                ;nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                ;concat-tests 
+                nil-tests rotation-tests insertion-tests deletion-tests search-tests
+                concat-tests 
                 split-tests
-                ;angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
-                ;dict-words-tests
-                #;exhaustive-structure-test))
+                angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
+                dict-words-tests
+                exhaustive-structure-test))
   (void
    (printf "Running test suite.\nWarning: this suite runs slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
