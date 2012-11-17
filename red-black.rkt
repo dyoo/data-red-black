@@ -698,34 +698,37 @@
 
 
 ;; split: tree node -> (values tree tree)
-;; Partitions the tree into two tree: the predecessors of x, and the successors of x.
+;; Partitions the tree into two trees: the predecessors of x, and the successors of x.
 (define (split a-tree x)
-  (let loop ([x (node-parent x)]
+  ;; The loop walks the ancestors of x, adding the left and right elements appropriately.
+  (let loop ([ancestor (node-parent x)]
              [leftward? (eq? (node-right (node-parent x))
                              x)]
+             ;; initially, the left and right subtrees have the immediate predecessors
+             ;; and successors.
              [L (node->tree/bh (node-left x))]
              [R (node->tree/bh (node-right x))])
-    (transplant! a-tree x nil)
     (cond
-      [(nil? x)
+      [(nil? ancestor)
        (values L R)]
       [leftward?
-       (define p (node-parent x))
-       (define new-leftward? (eq? (node-right p) x))
-       (define subtree (node->tree/bh (node-left x)))
-       (loop p 
+       (define new-ancestor (node-parent ancestor))
+       (define new-leftward? (eq? (node-right new-ancestor) ancestor))
+       (define subtree (node->tree/bh (node-left ancestor)))
+       (transplant! a-tree ancestor nil)
+       (loop new-ancestor 
              new-leftward?
-             (concat! subtree x L)
+             (concat! subtree ancestor L)
              R)]
       [else
-       (define p (node-parent x))
-       (define new-leftward? (eq? (node-right p) x))
-       (define subtree (node->tree/bh (node-right x)))
-       (transplant! a-tree x nil)
-       (loop p
+       (define new-ancestor (node-parent ancestor))
+       (define new-leftward? (eq? (node-right new-ancestor) ancestor))
+       (define subtree (node->tree/bh (node-right ancestor)))
+       (transplant! a-tree ancestor nil)
+       (loop new-ancestor
              new-leftward?
              L
-             (concat! R x subtree))])))
+             (concat! R ancestor subtree))])))
 
 
 
@@ -737,6 +740,7 @@
     [(nil? a-node)
      (new-tree)]
     [else
+     (set-node-parent! a-node nil)
      (set-node-color! a-node black)
      (let ([tree-bh (computed-black-height a-node)])
        (tree a-node
