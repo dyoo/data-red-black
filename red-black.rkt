@@ -705,19 +705,27 @@
                              x)]
              [L (node->tree/bh (node-left x))]
              [R (node->tree/bh (node-right x))])
+    (transplant! a-tree x nil)
     (cond
       [(nil? x)
        (values L R)]
       [leftward?
-       (loop (node-parent x)
-             (eq? (node-right (node-parent x)) x)
-             (concat! (node->tree/bh (node-left x)) x L)
+       (define p (node-parent x))
+       (define new-leftward? (eq? (node-right p) x))
+       (define subtree (node->tree/bh (node-left x)))
+       (loop p 
+             new-leftward?
+             (concat! subtree x L)
              R)]
       [else
-       (loop (node-parent x) 
-             (eq? (node-right (node-parent x)) x)
+       (define p (node-parent x))
+       (define new-leftward? (eq? (node-right p) x))
+       (define subtree (node->tree/bh (node-right x)))
+       (transplant! a-tree x nil)
+       (loop p
+             new-leftward?
              L
-             (concat! R x (node->tree/bh (node-right x))))])))
+             (concat! R x subtree))])))
 
 
 
@@ -1366,6 +1374,60 @@
       (check-rb-structure! l)
       (check-rb-structure! r))
      
+     (test-case
+      "(a b c d) ---split-a--> () (b c d)"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (insert-last! t "d" 1)
+      (define-values (l r) (split t (search t 0)))
+      (check-equal? (map first (tree-items l)) '())
+      (check-equal? (map first (tree-items r)) '("b" "c" "d"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))
+     
+     
+     (test-case
+      "(a b c d) ---split-b--> (a) (c d)"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (insert-last! t "d" 1)
+      (define-values (l r) (split t (search t 1)))
+      (check-equal? (map first (tree-items l)) '("a"))
+      (check-equal? (map first (tree-items r)) '("c" "d"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))
+     
+     
+     (test-case
+      "(a b c d) ---split-c--> (a b) (d)"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (insert-last! t "d" 1)
+      (define-values (l r) (split t (search t 2)))
+      (check-equal? (map first (tree-items l)) '("a" "b"))
+      (check-equal? (map first (tree-items r)) '("d"))
+      (check-rb-structure! l)
+      (check-rb-structure! r))
+
+     (test-case
+      "(a b c d) ---split-d--> (a b c) ()"
+      (define t (new-tree))
+      (insert-last! t "a" 1)
+      (insert-last! t "b" 1)
+      (insert-last! t "c" 1)
+      (insert-last! t "d" 1)
+      (define-values (l r) (split t (search t 3)))
+      (check-equal? (map first (tree-items l)) '("a" "b" "c"))
+      (check-equal? (map first (tree-items r)) '())
+      (check-rb-structure! l)
+      (check-rb-structure! r))
+     
      #;(test-case
       "(a ... z) ---split-m--> (a ... l) (n ...z)"
       (define t (new-tree))
@@ -1612,15 +1674,13 @@
   
   
   (define all-tests
-    (if #f    ;; Fixme: is there a good way to change this at runtime using raco test?
-        (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                    concat-tests split-tests
-                    angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test)
-        (test-suite "all-tests" nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                    concat-tests split-tests
-                    angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
-                    dict-words-tests
-                    exhaustive-structure-test)))
+    (test-suite "all-tests" 
+                ;nil-tests rotation-tests insertion-tests deletion-tests search-tests
+                ;concat-tests 
+                split-tests
+                ;angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
+                ;dict-words-tests
+                #;exhaustive-structure-test))
   (void
    (printf "Running test suite.\nWarning: this suite runs slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
