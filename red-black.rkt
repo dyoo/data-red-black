@@ -626,14 +626,17 @@
   (cond
     [(and (nil? (tree-root t1)) (nil? (tree-root t2)))
      (insert-first-node! t1 x)
+     (update-statistics-up-to-root! t1 x)
      t1]
 
     [(nil? (tree-root t1))
      (insert-before! t2 (tree-first t2) x)
+     (update-statistics-up-to-root! t2 x)
      t2]
     
     [(nil? (tree-root t2))
      (insert-after! t1 (tree-last t1) x)
+     (update-statistics-up-to-root! t1 x)
      t1]
 
     [(>= t1-bh t2-bh)
@@ -700,6 +703,7 @@
 ;; split: tree node -> (values tree tree)
 ;; Partitions the tree into two trees: the predecessors of x, and the successors of x.
 (define (split a-tree x)
+  #;(printf "splitting along ~s\n" (node-data x))
   ;; The loop walks the ancestors of x, adding the left and right elements appropriately.
   (let loop ([ancestor (node-parent x)]
              [leftward? (eq? (node-right (node-parent x))
@@ -708,6 +712,9 @@
              ;; and successors.
              [L (node->tree/bh (node-left x))]
              [R (node->tree/bh (node-right x))])
+    #;(printf "At ancestor ~s, leftward: ~a\n, L=~a, R=~a\n" (node-data ancestor) leftward? 
+            (tree-items L)
+            (tree-items R))
     (cond
       [(nil? ancestor)
        (values L R)]
@@ -715,7 +722,8 @@
        (define new-ancestor (node-parent ancestor))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
        (define subtree (node->tree/bh (node-left ancestor)))
-       (transplant! a-tree ancestor nil)
+       (set-node-left! ancestor nil)
+       (set-node-right! ancestor nil)
        (loop new-ancestor 
              new-leftward?
              (concat! subtree ancestor L)
@@ -724,7 +732,8 @@
        (define new-ancestor (node-parent ancestor))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
        (define subtree (node->tree/bh (node-right ancestor)))
-       (transplant! a-tree ancestor nil)
+       (set-node-left! ancestor nil)
+       (set-node-right! ancestor nil)
        (loop new-ancestor
              new-leftward?
              L
@@ -762,6 +771,20 @@
              [else
               (loop (node-right x) acc)])])))
 
+
+
+
+(define (tree-items n)
+  (let loop ([node (tree-root n)]
+             [acc null])
+    (cond
+      [(nil? node)
+       acc]
+      [else
+       (loop (node-left node)
+             (cons (list (node-data node)
+                         (node-self-width node))
+                   (loop (node-right node) acc)))])))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1432,16 +1455,14 @@
       (check-rb-structure! l)
       (check-rb-structure! r))
      
-     #;(test-case
+     (test-case
       "(a ... z) ---split-m--> (a ... l) (n ...z)"
       (define t (new-tree))
       (for ([i (in-range 26)])
         (insert-last! t (string (integer->char (+ i (char->integer #\a))))
                       1))
       (define letter-m (search t 12))
-      (printf "trying to split\n")
       (define-values (l r) (split t letter-m))
-      (printf "split done\n")
       (check-equal? (map first (tree-items l)) '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"))
       (check-equal? (map first (tree-items r)) '("n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"))
       (check-rb-structure! l)
