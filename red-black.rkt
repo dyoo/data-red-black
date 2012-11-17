@@ -48,12 +48,21 @@
          
          new-tree
          insert-first!
-         insert-last!
          insert-before!
          insert-after!
+
+         insert-first/data!
+         insert-last/data!
          
          delete!
+         
+         minimum
+         maximum
+         successor
+         predecessor
+         
          search)
+
 
 ;; First, our data structures:
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -180,6 +189,99 @@
            (node-subtree-width right)))))
 
 
+
+;; insert-first!: tree node -> void
+;; Insert node x as the first element in the tree.
+(define (insert-first! a-tree x)
+  (set-node-color! x red)
+  (cond
+    [(nil? (tree-root a-tree))
+     (set-tree-root! a-tree x)
+     (set-tree-first! a-tree x)
+     (set-tree-last! a-tree x)]
+    [else
+     (define first (tree-first a-tree))
+     (set-node-left! first x)
+     (set-node-parent! x first)
+     (set-tree-first! a-tree x)])
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+;; insert-first/data!: tree data width -> void
+;; Insert before the first element of the tree.
+(define (insert-first/data! a-tree data width)
+  (define x (node data width width nil nil nil red))
+  (insert-first! a-tree x))
+
+
+;; insert-last!: tree node -> void
+;; Insert node x as the last element in the tree.
+(define (insert-last! a-tree x)
+  (set-node-color! x red)
+  (cond
+    [(nil? (tree-root a-tree))
+     (set-tree-root! a-tree x)
+     (set-tree-first! a-tree x)
+     (set-tree-last! a-tree x)]
+    [else
+     (define last (tree-last a-tree))
+     (set-node-right! last x)
+     (set-node-parent! x last)
+     (set-tree-last! a-tree x)])
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+;; insert-last/data!: tree data width -> void
+;; Insert after the last element in the tree.
+(define (insert-last/data! a-tree data width)
+  (define x (node data width width nil nil nil red))
+  (insert-last! a-tree x))
+
+
+;; insert-after!: tree node node -> void
+;; Insert node x after element 'after' of the tree.
+;; x will be the immmediate successor of after upon completion.
+(define (insert-after! a-tree after x)
+  (cond
+    [(nil? (node-right x))
+     (set-node-right! after x)
+     (set-node-parent! x after)]
+    [else    
+     (define y (minimum (node-right after)))
+     (set-node-left! y x)
+     (set-node-parent! x y)])
+  
+  (set-node-color! x red)
+  (when (eq? after (tree-last a-tree))
+    (set-tree-last! a-tree x))
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+;; insert-before!: tree node node -> void
+;; Insert node x before element 'before' of the tree.
+;; x will be the immmediate predecessor of before upon completion.
+(define (insert-before! a-tree before x)
+  (cond
+    [(nil? (node-left x))
+     (set-node-left! before x)
+     (set-node-parent! x before)]
+    [else    
+     (define y (maximum (node-left before)))
+     (set-node-right! y x)
+     (set-node-parent! x y)])
+  
+  (set-node-color! x red)
+  (when (eq? before (tree-first a-tree))
+    (set-tree-first! a-tree x))
+  (update-statistics-up-to-root! a-tree (node-parent x))
+  (fix-after-insert! a-tree x))
+
+
+
+
 ;; left-rotate!: tree node natural -> void
 ;; INTERNAL
 ;; Rotates the x node node to the left.
@@ -231,103 +333,6 @@
   ;; rotation:
   (set-node-subtree-width! x (node-subtree-width y))
   (set-node-subtree-width! y (computed-node-subtree-width y)))
-
-
-;; insert-last!: tree data width -> void
-;; Insert after the last element in the tree.
-(define (insert-last! a-tree data width)
-  (define x (node data width width nil nil nil red))
-  (cond
-    [(nil? (tree-root a-tree))
-     (set-tree-root! a-tree x)
-     (set-tree-first! a-tree x)
-     (set-tree-last! a-tree x)]
-    [else
-     (define last (tree-last a-tree))
-     (set-node-right! last x)
-     (set-node-parent! x last)
-     (set-tree-last! a-tree x)])
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
-;; insert-first!: tree data width -> void
-;; Insert before the first element of the tree.
-(define (insert-first! a-tree data width)
-  (define x (node data width width nil nil nil red))
-  (cond
-    [(nil? (tree-root a-tree))
-     (set-tree-root! a-tree x)
-     (set-tree-first! a-tree x)
-     (set-tree-last! a-tree x)]
-    [else
-     (define first (tree-first a-tree))
-     (set-node-left! first x)
-     (set-node-parent! x first)
-     (set-tree-first! a-tree x)])
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
-;; insert-first-node!: tree node -> void
-;; Insert node x as the first element in the tree.
-(define (insert-first-node! a-tree x)
-  (set-node-color! x red)
-  (cond
-    [(nil? (tree-root a-tree))
-     (set-tree-root! a-tree x)
-     (set-tree-first! a-tree x)
-     (set-tree-last! a-tree x)]
-    [else
-     (define first (tree-first a-tree))
-     (set-node-left! first x)
-     (set-node-parent! x first)
-     (set-tree-first! a-tree x)])
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
-
-;; insert-after!: tree node node -> void
-;; Insert node x after element 'after' of the tree.
-;; x will be the immmediate successor of after upon completion.
-(define (insert-after! a-tree after x)
-  (cond
-    [(nil? (node-right x))
-     (set-node-right! after x)
-     (set-node-parent! x after)]
-    [else    
-     (define y (minimum (node-right after)))
-     (set-node-left! y x)
-     (set-node-parent! x y)])
-  
-  (set-node-color! x red)
-  (when (eq? after (tree-last a-tree))
-    (set-tree-last! a-tree x))
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
-;; insert-before!: tree node node -> void
-;; Insert node x before element 'before' of the tree.
-;; x will be the immmediate predecessor of before upon completion.
-(define (insert-before! a-tree before x)
-  (cond
-    [(nil? (node-left x))
-     (set-node-left! before x)
-     (set-node-parent! x before)]
-    [else    
-     (define y (maximum (node-left before)))
-     (set-node-right! y x)
-     (set-node-parent! x y)])
-  
-  (set-node-color! x red)
-  (when (eq? before (tree-first a-tree))
-    (set-tree-first! a-tree x))
-  (update-statistics-up-to-root! a-tree (node-parent x))
-  (fix-after-insert! a-tree x))
-
-
 
 
 ;; fix-after-insert!: tree node natural -> void
@@ -628,7 +633,7 @@
   (define t2-bh (tree-bh t2))
   (cond
     [(and (nil? (tree-root t1)) (nil? (tree-root t2)))
-     (insert-first-node! t1 x)
+     (insert-first! t1 x)
      (update-statistics-up-to-root! t1 x)
      t1]
 
@@ -1016,14 +1021,14 @@
      
      (test-case "small beginnings"
                 (define t (new-tree))
-                (insert-last! t "small world" 11)
+                (insert-last/data! t "small world" 11)
                 (check-rb-structure! t))
      
      (test-begin
       (define t (new-tree))
-      (insert-last! t "foobar" 6)
-      (insert-last! t "hello" 5)
-      (insert-last! t "world" 5)
+      (insert-last/data! t "foobar" 6)
+      (insert-last/data! t "hello" 5)
+      (insert-last/data! t "world" 5)
       (check-equal? (tree-items t)
                     '(("foobar" 6)
                       ("hello" 5)
@@ -1033,9 +1038,9 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-first! t "a" 1)
-      (insert-first! t "b" 1)
-      (insert-first! t "c" 1)
+      (insert-first/data! t "a" 1)
+      (insert-first/data! t "b" 1)
+      (insert-first/data! t "c" 1)
       (check-equal? (tree-items t)
                     '(("c" 1) ("b" 1) ("a" 1)))
       (check-equal? (tree->list t)
@@ -1045,11 +1050,11 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-first! t "alpha" 5)
-      (insert-first! t "beta" 4)
-      (insert-first! t "gamma" 5)
-      (insert-first! t "delta" 5)
-      (insert-first! t "omega" 5)
+      (insert-first/data! t "alpha" 5)
+      (insert-first/data! t "beta" 4)
+      (insert-first/data! t "gamma" 5)
+      (insert-first/data! t "delta" 5)
+      (insert-first/data! t "omega" 5)
       (check-equal? (tree-items t)
                     '(("omega" 5) ("delta" 5)
                                   ("gamma" 5) ("beta" 4) ("alpha" 5)))
@@ -1058,8 +1063,8 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-last! t "hi" 2)
-      (insert-last! t "bye" 3)
+      (insert-last/data! t "hi" 2)
+      (insert-last/data! t "bye" 3)
       (define the-root (tree-root t))
       (check-equal? (node-left the-root)
                     nil)
@@ -1071,9 +1076,9 @@
      
      (test-begin 
       (define t (new-tree))
-      (insert-last! t "hi" 2)
-      (insert-last! t "bye" 3)
-      (insert-last! t "again" 5)
+      (insert-last/data! t "hi" 2)
+      (insert-last/data! t "bye" 3)
+      (insert-last/data! t "again" 5)
       (define the-root (tree-root t))
       (check-equal? (node-data (node-left the-root))
                     "hi")
@@ -1096,7 +1101,7 @@
      (test-case
       "Deleting the last node in a tree should set us back to the nil case"
       (define t (new-tree))
-      (insert-first! t "hello" 5)
+      (insert-first/data! t "hello" 5)
       (delete! t (tree-root t))
       (check-equal? (tree-root t) nil)
       (check-rb-structure! t))
@@ -1104,7 +1109,7 @@
      (test-case
       "Deleting the last node in a tree: first and last should be nil"
       (define t (new-tree))
-      (insert-first! t "hello" 5)
+      (insert-first/data! t "hello" 5)
       (delete! t (tree-root t))
       (check-equal? (tree-first t) nil)
       (check-equal? (tree-last t) nil)
@@ -1113,8 +1118,8 @@
      (test-case
       "Delete the last node in a two-node tree: basic structure"
       (define t (new-tree))
-      (insert-last! t "dresden" 6)
-      (insert-last! t "files" 5)
+      (insert-last/data! t "dresden" 6)
+      (insert-last/data! t "files" 5)
       (delete! t (node-right (tree-root t)))
       (check-equal? (node-data (tree-root t)) "dresden")
       (check-equal? (node-left (tree-root t)) nil)
@@ -1124,8 +1129,8 @@
      (test-case
       "Delete the last node in a two-node tree: check the subtree-width has been updated"
       (define t (new-tree))
-      (insert-last! t "dresden" 6)
-      (insert-last! t "files" 5)
+      (insert-last/data! t "dresden" 6)
+      (insert-last/data! t "files" 5)
       (delete! t (node-right (tree-root t)))
       (check-equal? (node-subtree-width (tree-root t)) 6)
       (check-rb-structure! t))
@@ -1133,8 +1138,8 @@
      (test-case
       "Delete the last node in a two-node tree: check that tree-first and tree-last are correct"
       (define t (new-tree))
-      (insert-last! t "dresden" 6)
-      (insert-last! t "files" 5)
+      (insert-last/data! t "dresden" 6)
+      (insert-last/data! t "files" 5)
       (delete! t (node-right (tree-root t)))
       (check-true (node? (tree-root t)))
       (check-equal? (tree-first t) (tree-root t))
@@ -1145,11 +1150,11 @@
      (test-case
       "bigger case identified by angry monkey"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
-      (insert-last! t "d" 1)
-      (insert-last! t "e" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
+      (insert-last/data! t "d" 1)
+      (insert-last/data! t "e" 1)
       (check-rb-structure! t)
       (delete! t (search t 1))
       (check-rb-structure! t)
@@ -1170,7 +1175,7 @@
      
      (test-begin
       (define t (new-tree))
-      (insert-last! t "hello" 5)
+      (insert-last/data! t "hello" 5)
       (check-equal? (node-data (search t 0)) "hello")
       (check-equal? (node-data (search t 1)) "hello")
       (check-equal? (node-data (search t 2)) "hello")
@@ -1186,15 +1191,15 @@
      ;; the nodes are still there in the tree.
      (test-begin
       (define t (new-tree))
-      (insert-last! t "hello" 5)
-      (insert-last! t "" 0)
-      (insert-last! t "" 0)
-      (insert-last! t "" 0)
-      (insert-last! t "world" 5)
-      (insert-last! t "" 0)
-      (insert-last! t "" 0)
-      (insert-last! t "" 0)
-      (insert-last! t "test!" 5)
+      (insert-last/data! t "hello" 5)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "world" 5)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "" 0)
+      (insert-last/data! t "test!" 5)
       (check-equal? (tree-node-count t) 9)
       (check-equal? (node-data (search t 0)) "hello")
       (check-equal? (node-data (search t 1)) "hello")
@@ -1215,7 +1220,7 @@
       (define t (new-tree))
       (define words (string-split "This is a test of the emergency broadcast system"))
       (for ([word (in-list words)])
-        (insert-last! t word (string-length word)))
+        (insert-last/data! t word (string-length word)))
       (check-equal? (node-data (search t 0)) "This")
       (check-equal? (node-data (search t 1)) "This")
       (check-equal? (node-data (search t 2)) "This")
@@ -1252,7 +1257,7 @@
       "left is empty"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t2 "hello" 5)
+      (insert-last/data! t2 "hello" 5)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2))
                     '("hello"))
@@ -1262,7 +1267,7 @@
       "right is empty"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "hello" 5)
+      (insert-last/data! t1 "hello" 5)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2))
                     '("hello"))
@@ -1272,8 +1277,8 @@
       "two single trees"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "append" 5)
-      (insert-last! t2 "this" 4)
+      (insert-last/data! t1 "append" 5)
+      (insert-last/data! t2 "this" 4)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("append" "this"))
       (check-rb-structure! t1+t2))
@@ -1283,9 +1288,9 @@
       "appending 2-1"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "love" 4)
-      (insert-last! t1 "and" 3)
-      (insert-last! t2 "peace" 5)
+      (insert-last/data! t1 "love" 4)
+      (insert-last/data! t1 "and" 3)
+      (insert-last/data! t2 "peace" 5)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "peace"))
       (check-rb-structure! t1+t2))
@@ -1294,9 +1299,9 @@
       "appending 1-2"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "love" 4)
-      (insert-last! t2 "and" 3)
-      (insert-last! t2 "war" 3)
+      (insert-last/data! t1 "love" 4)
+      (insert-last/data! t2 "and" 3)
+      (insert-last/data! t2 "war" 3)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("love" "and" "war"))
       (check-rb-structure! t1+t2))
@@ -1306,12 +1311,12 @@
       "appending 3-3"
       (define t1 (new-tree))
       (define t2 (new-tree))
-      (insert-last! t1 "four" 4)
-      (insert-last! t1 "score" 5)
-      (insert-last! t1 "and" 3)
-      (insert-last! t2 "seven" 5)
-      (insert-last! t2 "years" 5)
-      (insert-last! t2 "ago" 3)
+      (insert-last/data! t1 "four" 4)
+      (insert-last/data! t1 "score" 5)
+      (insert-last/data! t1 "and" 3)
+      (insert-last/data! t2 "seven" 5)
+      (insert-last/data! t2 "years" 5)
+      (insert-last/data! t2 "ago" 3)
       (define t1+t2 (join! t1 t2))
       (check-equal? (map first (tree-items t1+t2)) '("four" "score" "and" "seven" "years" "ago"))
       (check-rb-structure! t1+t2))
@@ -1346,11 +1351,11 @@
                   and that government of the people, by the people, for the people, 
                   shall not perish from the earth.")
       (for ([word (in-list (string-split m1))])
-        (insert-last! t1 word (string-length word)))      
+        (insert-last/data! t1 word (string-length word)))      
       (for ([word (in-list (string-split m2))])
-        (insert-last! t2 word (string-length word)))
+        (insert-last/data! t2 word (string-length word)))
       (for ([word (in-list (string-split m3))])
-        (insert-last! t3 word (string-length word)))
+        (insert-last/data! t3 word (string-length word)))
       (define speech-tree (join! (join! t1 t2) t3))
       (check-equal? (map first (tree-items speech-tree))
                     (string-split (string-append m1 " " m2 " " m3)))
@@ -1363,7 +1368,7 @@
      (test-case
       "(a) ---split-a--> () ()"
       (define t (new-tree))
-      (insert-last! t "a" 1)
+      (insert-last/data! t "a" 1)
       (define-values (l r) (split t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '())
@@ -1373,8 +1378,8 @@
      (test-case
       "(a b) ---split-a--> () (b)"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
       (define-values (l r) (split t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '("b"))
@@ -1384,8 +1389,8 @@
      (test-case
       "(a b) ---split-b--> (a) ()"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
       (define-values (l r) (split t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '())
@@ -1395,9 +1400,9 @@
      (test-case
       "(a b c) ---split-b--> (a) (c)"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
       (define-values (l r) (split t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '("c"))
@@ -1407,10 +1412,10 @@
      (test-case
       "(a b c d) ---split-a--> () (b c d)"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
-      (insert-last! t "d" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
+      (insert-last/data! t "d" 1)
       (define-values (l r) (split t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '("b" "c" "d"))
@@ -1421,10 +1426,10 @@
      (test-case
       "(a b c d) ---split-b--> (a) (c d)"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
-      (insert-last! t "d" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
+      (insert-last/data! t "d" 1)
       (define-values (l r) (split t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '("c" "d"))
@@ -1435,10 +1440,10 @@
      (test-case
       "(a b c d) ---split-c--> (a b) (d)"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
-      (insert-last! t "d" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
+      (insert-last/data! t "d" 1)
       (define-values (l r) (split t (search t 2)))
       (check-equal? (map first (tree-items l)) '("a" "b"))
       (check-equal? (map first (tree-items r)) '("d"))
@@ -1448,10 +1453,10 @@
      (test-case
       "(a b c d) ---split-d--> (a b c) ()"
       (define t (new-tree))
-      (insert-last! t "a" 1)
-      (insert-last! t "b" 1)
-      (insert-last! t "c" 1)
-      (insert-last! t "d" 1)
+      (insert-last/data! t "a" 1)
+      (insert-last/data! t "b" 1)
+      (insert-last/data! t "c" 1)
+      (insert-last/data! t "d" 1)
       (define-values (l r) (split t (search t 3)))
       (check-equal? (map first (tree-items l)) '("a" "b" "c"))
       (check-equal? (map first (tree-items r)) '())
@@ -1462,7 +1467,7 @@
       "(a ... z) ---split-m--> (a ... l) (n ...z)"
       (define t (new-tree))
       (for ([i (in-range 26)])
-        (insert-last! t (string (integer->char (+ i (char->integer #\a))))
+        (insert-last/data! t (string (integer->char (+ i (char->integer #\a))))
                       1))
       (define letter-m (search t 12))
       (define-values (l r) (split t letter-m))
@@ -1479,7 +1484,7 @@
       (define t (new-tree))
       (printf "dict words test\n")
       (for ([word (in-list (force all-words))])
-        (insert-last! t word (string-length word)))
+        (insert-last/data! t word (string-length word)))
       
       (printf "checking structure\n")
       (check-rb-structure! t)
@@ -1495,7 +1500,7 @@
      (test-begin
       (define t (new-tree))
       (for ([word (in-list (reverse (force all-words)))])
-        (insert-first! t word (string-length word)))
+        (insert-first/data! t word (string-length word)))
       (printf "checking structure\n")
       (check-rb-structure! t)
       (printf "searching\n")
@@ -1525,13 +1530,13 @@
           (define new-word (random-word))
           #;(printf "inserting ~s to front\n" new-word)
           (set! known-model (cons new-word known-model))
-          (insert-first! t new-word (string-length new-word)))
+          (insert-first/data! t new-word (string-length new-word)))
         
         (define/public (insert-back!)
           (define new-word (random-word))
           #;(printf "inserting ~s to back\n" new-word)
           (set! known-model (append known-model (list new-word)))
-          (insert-last! t new-word (string-length new-word)))
+          (insert-last/data! t new-word (string-length new-word)))
         
         (define/public (delete-kth! k)
           #;(printf "deleting ~s\n" (list-ref known-model k))
@@ -1662,7 +1667,7 @@
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t) )
            #;(check-rb-structure! t))
-         (insert-last! t word (string-length word))))
+         (insert-last/data! t word (string-length word))))
       
       (collect-garbage)
       (collect-garbage)
@@ -1696,7 +1701,7 @@
          (when (= 1 (modulo i 10000))
            (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t))
            #;(check-rb-structure! t))
-         (insert-first! t word (string-length word)))))))
+         (insert-first/data! t word (string-length word)))))))
   
   
   
