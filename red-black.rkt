@@ -637,14 +637,26 @@
 ;; a search in the tree with that position will return the node.
 ;; Note: (position nil) will return -1.
 (define (position n)
-  (cond [(nil? n)
-         -1]
-        [else
-         (let loop ([n n]
-                    [acc (node-subtree-width (node-left n))])
-           (cond
-             [(nil? n)
-              acc]))]))
+  (cond 
+    [(nil? n)
+     -1]
+    [else
+     (let loop ([n n]
+                [came-from-right? #f]
+                [acc (node-subtree-width (node-left n))])
+       (cond
+         [(nil? n)
+          acc]
+         [came-from-right?
+          (loop (node-parent n)
+                (eq? (node-right (node-parent n)) n)
+                (+ acc
+                   (node-subtree-width (node-left n))
+                   (node-self-width n)))]
+         [else
+          (loop (node-parent n)
+                (eq? (node-right (node-parent n)) n)
+                acc)]))]))
 
 
 
@@ -1368,7 +1380,24 @@
      "position tests"
      (test-case
       "empty case"
-      (check-equal? (position nil) -1))))
+      (check-equal? (position nil) -1))
+     (test-case
+      "simple case"
+      (define t (new-tree))
+      (insert-last/data! t "foobar" 6)
+      (check-equal? (position (tree-root t)) 0))
+     
+     (test-case
+      "simple case of a few random words"
+      (define t (new-tree))
+      (insert-last/data! t "uc berkeley" 11)
+      (insert-last/data! t "wpi" 3)
+      (insert-last/data! t "brown" 5)
+      (insert-last/data! t "university of utah" 18)
+      (check-equal? (position (tree-first t)) 0)
+      (check-equal? (position (successor (tree-first t))) 11)
+      (check-equal? (position (successor (successor (tree-first t)))) 14)
+      (check-equal? (position (successor (successor (successor (tree-first t))))) 19))))
   
   
   (define concat-tests
