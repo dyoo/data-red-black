@@ -1205,6 +1205,56 @@
   
   
   
+  (define mixed-tests
+    (test-suite
+     "other miscellaneous tests"
+     (test-case 
+      "Another sequence identified by the random monkey"
+      ;inserting "A" to front
+      ;inserting "B" to front
+      ;Inserting "C" after "A"
+      ;Inserting "D" after "B"
+      ;inserting "E" to back
+      ;inserting "F" to front
+      ;deleting "F"
+      ;inserting "G" to back
+      ;inserting "H" to back
+      ;inserting "I" to front
+      ;inserting "J" to back
+      ;inserting "K" to front
+      ;inserting "L" before "E"
+      (define t (new-tree))
+      
+      (insert-first/data! t "A" 1)
+      (check-equal? (map first (tree-items t)) '("A"))
+      (insert-first/data! t "B" 1)
+      (check-equal? (map first (tree-items t)) '("B" "A"))
+      (insert-after/data! t (search t 1) "C" 1)
+      (check-equal? (map first (tree-items t)) '("B" "A" "C"))
+      (insert-after/data! t (search t 0) "D" 1)
+      (check-equal? (map first (tree-items t)) '("B" "D" "A" "C"))
+      (insert-last/data! t "E" 1)
+      (check-equal? (map first (tree-items t)) '("B" "D" "A" "C" "E"))
+      (insert-first/data! t "F" 1)
+      (check-equal? (map first (tree-items t)) '("F" "B" "D" "A" "C" "E"))
+      (delete! t (search t 0))
+      (check-equal? (map first (tree-items t)) '("B" "D" "A" "C" "E"))
+      (insert-last/data! t "G" 1)
+      (check-equal? (map first (tree-items t)) '("B" "D" "A" "C" "E" "G"))
+      (insert-last/data! t "H" 1)
+      (check-equal? (map first (tree-items t)) '("B" "D" "A" "C" "E" "G" "H"))
+      (insert-first/data! t "I" 1)
+      (check-equal? (map first (tree-items t)) '("I" "B" "D" "A" "C" "E" "G" "H"))
+      (insert-last/data! t "J" 1)
+      (check-equal? (map first (tree-items t)) '("I" "B" "D" "A" "C" "E" "G" "H" "J"))
+      (insert-first/data! t "K" 1)
+      (check-equal? (map first (tree-items t)) '("K" "I" "B" "D" "A" "C" "E" "G" "H" "J"))
+      (check-equal? (node-data (search t 6)) "E")
+      (insert-before/data! t (search t 6) "L" 1)
+      (check-equal? (map first (tree-items t)) '("K" "I" "B" "D" "A" "C" "L" "E" "G" "H" "J"))
+      )))
+      
+    
   (define search-tests
     (test-suite 
      "search-tests"
@@ -1568,18 +1618,18 @@
         
         (define/public (insert-front!)
           (define new-word (random-word))
-          ;(printf "inserting ~s to front\n" new-word)
+          (printf "inserting ~s to front\n" new-word)
           (set! known-model (cons new-word known-model))
           (insert-first/data! t new-word (string-length new-word)))
         
         (define/public (insert-back!)
           (define new-word (random-word))
-          ;(printf "inserting ~s to back\n" new-word)
+          (printf "inserting ~s to back\n" new-word)
           (set! known-model (append known-model (list new-word)))
           (insert-last/data! t new-word (string-length new-word)))
         
         (define/public (delete-kth! k)
-          ;(printf "deleting ~s\n" (list-ref known-model k))
+          (printf "deleting ~s\n" (list-ref known-model k))
           (define offset (kth-offset k))
           (define node (search t offset))
           (delete! t node)
@@ -1601,26 +1651,28 @@
             (delete-kth! k)))
         
         (define/public (insert-before/random!)
-          (define k (random (length known-model)))
-          (define offset (kth-offset k))
-          (define node (search t offset))
-          (define new-word (random-word))
-          (printf "Inserting ~s before ~s\n" new-word (node-data node))
-          (insert-before/data! t node new-word (string-length new-word))
-          (set! known-model (append (take known-model k)
-                                    (list new-word)
-                                    (drop known-model k))))
+          (when (not (empty? known-model))
+            (define k (random (length known-model)))
+            (define offset (kth-offset k))
+            (define node (search t offset))
+            (define new-word (random-word))
+            (printf "Inserting ~s before ~s\n" new-word (node-data node))
+            (insert-before/data! t node new-word (string-length new-word))
+            (set! known-model (append (take known-model k)
+                                      (list new-word)
+                                      (drop known-model k)))))
         
         (define/public (insert-after/random!)
-          (define k (random (length known-model)))
-          (define offset (kth-offset k))
-          (define node (search t offset))
-          (define new-word (random-word))
-          (printf "Inserting ~s after ~s\n" new-word (node-data node))
-          (insert-after/data! t node new-word (string-length new-word))
-          (set! known-model (append (take known-model (add1 k))
-                                    (list new-word)
-                                    (drop known-model (add1 k)))))
+          (when (not (empty? known-model))
+            (define k (random (length known-model)))
+            (define offset (kth-offset k))
+            (define node (search t offset))
+            (define new-word (random-word))
+            (printf "Inserting ~s after ~s\n" new-word (node-data node))
+            (insert-after/data! t node new-word (string-length new-word))
+            (set! known-model (append (take known-model (add1 k))
+                                      (list new-word)
+                                      (drop known-model (add1 k))))))
           
         
         ;; Concatenation.  Drop our existing tree and throw it at the other.
@@ -1779,10 +1831,12 @@
   
   
   (define all-tests
-    (test-suite "all-tests" 
+    mixed-tests
+    #;(test-suite "all-tests" 
                 nil-tests rotation-tests insertion-tests deletion-tests search-tests
                 concat-tests 
                 split-tests
+                mixed-tests
                 angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
                 dict-words-tests
                 exhaustive-structure-test))
