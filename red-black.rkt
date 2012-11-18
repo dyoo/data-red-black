@@ -64,7 +64,8 @@
          maximum
          successor
          predecessor
-         search)
+         search
+         position)
 
 
 ;; First, our data structures:
@@ -631,6 +632,21 @@
                        (node-right a-node))])])])))
 
 
+;; position: node -> (or natural -1)
+;; Given a node in the tree, returns its position such that
+;; a search in the tree with that position will return the node.
+;; Note: (position nil) will return -1.
+(define (position n)
+  (cond [(nil? n)
+         -1]
+        [else
+         (let loop ([n n]
+                    [acc (node-subtree-width (node-left n))])
+           (cond
+             [(nil? n)
+              acc]))]))
+
+
 
 
 ;; join!: tree tree -> tree
@@ -940,7 +956,8 @@
          (loop (node-right node))]))
     
     
-    ;; The maximum and minimum should be correctly linked as tree-last and tree-first, respectively:
+    ;; The maximum and minimum should be correctly linked
+    ;; as tree-last and tree-first, respectively:
     (unless (eq? (tree-first a-tree)
                  (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
       (error 'check-rb-structure "in ~a, minimum (~a) is not first (~a)" 
@@ -1344,6 +1361,14 @@
       (check-equal? (node-data (search t 16)) "emergency")
       (check-equal? (node-data (search t 25)) "broadcast")
       (check-equal? (node-data (search t 34)) "system"))))
+  
+  
+  (define position-tests
+    (test-suite
+     "position tests"
+     (test-case
+      "empty case"
+      (check-equal? (position nil) -1))))
   
   
   (define concat-tests
@@ -1900,7 +1925,12 @@
   
   (define all-tests
     (test-suite "all-tests" 
-                nil-tests rotation-tests insertion-tests deletion-tests search-tests
+                nil-tests 
+                rotation-tests
+                insertion-tests
+                deletion-tests
+                search-tests
+                position-tests
                 concat-tests
                 predecessor-successor-min-max-tests
                 split-tests
