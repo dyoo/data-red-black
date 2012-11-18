@@ -50,19 +50,20 @@
          insert-first!
          insert-before!
          insert-after!
-         
          insert-first/data!
          insert-last/data!
          insert-before/data!
          insert-after/data!
          
          delete!
+         concat!
+         join!
+         split!
          
          minimum
          maximum
          successor
          predecessor
-         
          search)
 
 
@@ -103,12 +104,18 @@
 ;; red?: node -> boolean
 ;; Is the node red?
 (define-syntax-rule (red? x) 
-  (eq? (node-color x) red))
+  (let ([v x])
+    (eq? (node-color v) red)
+    #;(and (not (eq? v nil))
+           (eq? (node-color v) red))))
 
 ;; black?: node -> boolean
 ;; Is the node black?
 (define-syntax-rule (black? x) 
-  (eq? (node-color x) black))
+  (let ([v x])
+    (eq? (node-color v) black)
+    #;(or (eq? v nil)
+          (eq? (node-color v) black))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -729,7 +736,7 @@
 
 ;; split: tree node -> (values tree tree)
 ;; Partitions the tree into two trees: the predecessors of x, and the successors of x.
-(define (split a-tree x)
+(define (split! a-tree x)
   #;(printf "splitting along ~s\n" (node-data x))
   ;; The loop walks the ancestors of x, adding the left and right elements appropriately.
   (let loop ([ancestor (node-parent x)]
@@ -1252,7 +1259,14 @@
       (check-equal? (node-data (search t 6)) "E")
       (insert-before/data! t (search t 6) "L" 1)
       (check-equal? (map first (tree-items t)) '("K" "I" "B" "D" "A" "C" "L" "E" "G" "H" "J"))
-      )))
+      
+      (for/fold ([n (minimum (tree-root t))]) ([w (in-list '("K" "I" "B" "D" "A" "C" "L" "E" "G" "H" "J"))])
+        (check-equal? (node-data n) w)
+        (successor n))
+      
+      (for/fold ([n (maximum (tree-root t))]) ([w (in-list (reverse '("K" "I" "B" "D" "A" "C" "L" "E" "G" "H" "J")))])
+        (check-equal? (node-data n) w)
+        (predecessor n)))))
   
   
   (define search-tests
@@ -1459,7 +1473,7 @@
       "(a) ---split-a--> () ()"
       (define t (new-tree))
       (insert-last/data! t "a" 1)
-      (define-values (l r) (split t (search t 0)))
+      (define-values (l r) (split! t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '())
       (check-rb-structure! l)
@@ -1470,7 +1484,7 @@
       (define t (new-tree))
       (insert-last/data! t "a" 1)
       (insert-last/data! t "b" 1)
-      (define-values (l r) (split t (search t 0)))
+      (define-values (l r) (split! t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '("b"))
       (check-rb-structure! l)
@@ -1481,7 +1495,7 @@
       (define t (new-tree))
       (insert-last/data! t "a" 1)
       (insert-last/data! t "b" 1)
-      (define-values (l r) (split t (search t 1)))
+      (define-values (l r) (split! t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '())
       (check-rb-structure! l)
@@ -1493,7 +1507,7 @@
       (insert-last/data! t "a" 1)
       (insert-last/data! t "b" 1)
       (insert-last/data! t "c" 1)
-      (define-values (l r) (split t (search t 1)))
+      (define-values (l r) (split! t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '("c"))
       (check-rb-structure! l)
@@ -1506,7 +1520,7 @@
       (insert-last/data! t "b" 1)
       (insert-last/data! t "c" 1)
       (insert-last/data! t "d" 1)
-      (define-values (l r) (split t (search t 0)))
+      (define-values (l r) (split! t (search t 0)))
       (check-equal? (map first (tree-items l)) '())
       (check-equal? (map first (tree-items r)) '("b" "c" "d"))
       (check-rb-structure! l)
@@ -1520,7 +1534,7 @@
       (insert-last/data! t "b" 1)
       (insert-last/data! t "c" 1)
       (insert-last/data! t "d" 1)
-      (define-values (l r) (split t (search t 1)))
+      (define-values (l r) (split! t (search t 1)))
       (check-equal? (map first (tree-items l)) '("a"))
       (check-equal? (map first (tree-items r)) '("c" "d"))
       (check-rb-structure! l)
@@ -1534,7 +1548,7 @@
       (insert-last/data! t "b" 1)
       (insert-last/data! t "c" 1)
       (insert-last/data! t "d" 1)
-      (define-values (l r) (split t (search t 2)))
+      (define-values (l r) (split! t (search t 2)))
       (check-equal? (map first (tree-items l)) '("a" "b"))
       (check-equal? (map first (tree-items r)) '("d"))
       (check-rb-structure! l)
@@ -1547,7 +1561,7 @@
       (insert-last/data! t "b" 1)
       (insert-last/data! t "c" 1)
       (insert-last/data! t "d" 1)
-      (define-values (l r) (split t (search t 3)))
+      (define-values (l r) (split! t (search t 3)))
       (check-equal? (map first (tree-items l)) '("a" "b" "c"))
       (check-equal? (map first (tree-items r)) '())
       (check-rb-structure! l)
@@ -1560,13 +1574,66 @@
         (insert-last/data! t (string (integer->char (+ i (char->integer #\a))))
                            1))
       (define letter-m (search t 12))
-      (define-values (l r) (split t letter-m))
+      (define-values (l r) (split! t letter-m))
       (check-equal? (map first (tree-items l)) '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"))
       (check-equal? (map first (tree-items r)) '("n" "o" "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z"))
       (check-rb-structure! l)
-      (check-rb-structure! r))))
+      (check-rb-structure! r))
+     
+     (test-case
+      "(a ... z) ---split-n--> (a ... l) (n ...z)"
+      (define letters (for/list ([i (in-range 26)])
+                        (string (integer->char (+ i (char->integer #\a))))))
+      (for ([n (in-range 26)])
+        (define t (new-tree))
+        (for ([w (in-list letters)])
+          (insert-last/data! t w 1))
+        (define-values (l r) (split! t (search t n)))
+        (define-values (expected-l 1+expected-r) (split-at letters n))
+        (check-equal? (map first (tree-items l)) expected-l)
+        (check-equal? (map first (tree-items r)) (rest 1+expected-r))
+        (check-rb-structure! l)
+        (check-rb-structure! r)))))
+     
   
+
+  (define predecessor-successor-min-max-tests
+    (test-suite
+     "predecesssor, successor, maximum, minimum tests"
+     (test-case
+      "simple predecessor and successor tests"
+      (define known-model '("this" "is" "yet" "another" "test" "that" "makes" "sure" "we" "can" "walk"
+                                   "the" "tree" "reliably" "using" "successor" "and" "predecessor"))
+      ;; Make sure successor, predecessor are both doing the right thing on it:
+      (define t (new-tree))
+      (for ([w (in-list known-model)])
+        (insert-last/data! t w (string-length w)))
+      (check-equal? (node-data (minimum (tree-root t))) "this")
+      (check-equal? (node-data (maximum (tree-root t))) "predecessor")
+      (for/fold ([n (tree-first t)]) ([w (in-list known-model)])
+        (check-equal? (node-data n) w)
+        (successor n))
+      (for/fold ([n (tree-last t)]) ([w (in-list (reverse known-model))])
+        (check-equal? (node-data n) w)
+        (predecessor n)))
+
+     (test-case
+      "one-element tree"
+      (define t (new-tree))
+      (insert-last/data! t "unary" 5)
+      (check-eq? (predecessor (tree-root t)) nil)
+      (check-eq? (successor (tree-root t)) nil)
+      (check-eq? (maximum (tree-root t)) (tree-root t))
+      (check-eq? (minimum (tree-root t)) (tree-root t)))
+     
+     (test-case
+      "nil cases"
+      (check-eq? (predecessor nil) nil)
+      (check-eq? (successor nil) nil)
+      (check-eq? (maximum nil) nil)
+      (check-eq? (minimum nil) nil))))
   
+     
   (define dict-words-tests
     (test-suite
      "Working with a lot of words.  Insert and search tests."
@@ -1690,6 +1757,7 @@
         (define/public (check-consistency!)
           ;; Check that the structure is consistent with our model.
           (check-equal? (map first (tree-items t)) known-model)
+                    
           ;; And make sure it's still an rb-tree:
           (check-rb-structure! t)))))
   
@@ -1833,7 +1901,8 @@
   (define all-tests
     (test-suite "all-tests" 
                 nil-tests rotation-tests insertion-tests deletion-tests search-tests
-                concat-tests 
+                concat-tests
+                predecessor-successor-min-max-tests
                 split-tests
                 mixed-tests
                 angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
