@@ -126,23 +126,23 @@
 ;; Looks for the minimum element of the tree rooted at n.
 (define (minimum n)
   (let loop ([n n])
-       (define left (node-left n))
-       (cond
-         [(nil? left)
-          n]
-         [else
-          (loop left)])))
+    (define left (node-left n))
+    (cond
+      [(nil? left)
+       n]
+      [else
+       (loop left)])))
 
 ;; maximum: node -> node
 ;; Looks for the maximum element of the tree rooted at n.
 (define (maximum n)
   (let loop ([n n])
-       (define right (node-right n))
-       (cond
-         [(nil? right)
-          n]
-         [else
-          (loop right)])))
+    (define right (node-right n))
+    (cond
+      [(nil? right)
+       n]
+      [else
+       (loop right)])))
 
 
 ;; successor: node -> node
@@ -236,10 +236,12 @@
 ;; x will be the immmediate predecessor of before upon completion.
 (define (insert-before! a-tree before x)
   (cond
-    [(nil? (node-left x))
+    [(nil? (node-left before))
+     (displayln "1")
      (set-node-left! before x)
      (set-node-parent! x before)]
     [else    
+     (displayln "2")
      (define y (maximum (node-left before)))
      (set-node-right! y x)
      (set-node-parent! x y)])
@@ -256,7 +258,7 @@
 ;; x will be the immmediate successor of after upon completion.
 (define (insert-after! a-tree after x)
   (cond
-    [(nil? (node-right x))
+    [(nil? (node-right after))
      (set-node-right! after x)
      (set-node-parent! x after)]
     [else    
