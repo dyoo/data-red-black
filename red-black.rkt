@@ -59,12 +59,13 @@
          concat!
          join!
          split!
-         
+ 
+         search
+
          minimum
          maximum
          successor
          predecessor
-         search
          position)
 
 
@@ -1378,9 +1379,11 @@
   (define position-tests
     (test-suite
      "position tests"
+     
      (test-case
       "empty case"
       (check-equal? (position nil) -1))
+     
      (test-case
       "simple case"
       (define t (new-tree))
@@ -1397,7 +1400,24 @@
       (check-equal? (position (tree-first t)) 0)
       (check-equal? (position (successor (tree-first t))) 11)
       (check-equal? (position (successor (successor (tree-first t)))) 14)
-      (check-equal? (position (successor (successor (successor (tree-first t))))) 19))))
+      (check-equal? (position (successor (successor (successor (tree-first t))))) 19))
+     
+     (test-case
+      "slightly larger example"
+      (define t (new-tree))
+      (define words 
+        (string-split 
+         "In a hole in the ground there lived a hobbit.  Not a
+         nasty, dirty wet hole, filled with the ends of worms and an oozy
+         smell, nor yet a dry, bare, sandy ole with nothing in it to sit down on
+         or to eat: it was a hobbit-hole, and that means comfort."))
+      (for ([w (in-list words)]) 
+        (insert-last/data! t w (string-length w)))
+      (for/fold ([pos 0]) ([w (in-list words)])
+        (define n (search t pos))
+        (check-equal? (node-data n) w)
+        (check-equal? (position n) pos)
+        (+ pos (string-length w))))))
   
   
   (define concat-tests
