@@ -50,7 +50,7 @@
          insert-first!
          insert-before!
          insert-after!
-
+         
          insert-first/data!
          insert-last/data!
          insert-before/data!
@@ -237,11 +237,9 @@
 (define (insert-before! a-tree before x)
   (cond
     [(nil? (node-left before))
-     (displayln "1")
      (set-node-left! before x)
      (set-node-parent! x before)]
     [else    
-     (displayln "2")
      (define y (maximum (node-left before)))
      (set-node-right! y x)
      (set-node-parent! x y)])
@@ -657,7 +655,7 @@
      (insert-first! t1 x)
      (update-statistics-up-to-root! t1 x)
      t1]
-
+    
     [(nil? (tree-root t1))
      (insert-before! t2 (tree-first t2) x)
      (update-statistics-up-to-root! t2 x)
@@ -667,9 +665,9 @@
      (insert-after! t1 (tree-last t1) x)
      (update-statistics-up-to-root! t1 x)
      t1]
-
+    
     [(>= t1-bh t2-bh)
-       
+     
      (set-tree-last! t1 (tree-last t2))
      (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
      (define b (tree-root t2))
@@ -682,7 +680,7 @@
      (update-statistics-up-to-root! t1 x)
      (fix-after-insert! t1 x)
      t1]
-
+    
     [else
      (set-tree-first! t2 (tree-first t1))
      (define a (tree-root t1))
@@ -742,8 +740,8 @@
              [L (node->tree/bh (node-left x))]
              [R (node->tree/bh (node-right x))])
     #;(printf "At ancestor ~s, leftward: ~a\n, L=~a, R=~a\n" (node-data ancestor) leftward? 
-            (tree-items L)
-            (tree-items R))
+              (tree-items L)
+              (tree-items R))
     (cond
       [(nil? ancestor)
        (values L R)]
@@ -898,7 +896,7 @@
   ;; tree-structure is as expected.  Note: this functions is
   ;; EXTRAORDINARILY expensive.  Do not use this outside of tests.
   (define (check-rb-structure! a-tree)
-   
+    
     ;; nil should always be black: algorithms depend on this!
     (check-eq? (node-color nil) black)
     
@@ -933,7 +931,7 @@
            (error 'check-rb-structure "rb violation: two reds are adjacent"))
          (loop (node-left node))
          (loop (node-right node))]))
-             
+    
     
     ;; The maximum and minimum should be correctly linked as tree-last and tree-first, respectively:
     (unless (eq? (tree-first a-tree)
@@ -1255,8 +1253,8 @@
       (insert-before/data! t (search t 6) "L" 1)
       (check-equal? (map first (tree-items t)) '("K" "I" "B" "D" "A" "C" "L" "E" "G" "H" "J"))
       )))
-      
-    
+  
+  
   (define search-tests
     (test-suite 
      "search-tests"
@@ -1541,7 +1539,7 @@
       (check-equal? (map first (tree-items r)) '("d"))
       (check-rb-structure! l)
       (check-rb-structure! r))
-
+     
      (test-case
       "(a b c d) ---split-d--> (a b c) ()"
       (define t (new-tree))
@@ -1560,7 +1558,7 @@
       (define t (new-tree))
       (for ([i (in-range 26)])
         (insert-last/data! t (string (integer->char (+ i (char->integer #\a))))
-                      1))
+                           1))
       (define letter-m (search t 12))
       (define-values (l r) (split t letter-m))
       (check-equal? (map first (tree-items l)) '("a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l"))
@@ -1580,7 +1578,7 @@
       
       (printf "checking structure\n")
       (check-rb-structure! t)
-
+      
       (printf "searching\n")
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data (search t offset)) word)
@@ -1620,18 +1618,18 @@
         
         (define/public (insert-front!)
           (define new-word (random-word))
-          (printf "inserting ~s to front\n" new-word)
+          #;(printf "inserting ~s to front\n" new-word)
           (set! known-model (cons new-word known-model))
           (insert-first/data! t new-word (string-length new-word)))
         
         (define/public (insert-back!)
           (define new-word (random-word))
-          (printf "inserting ~s to back\n" new-word)
+          #;(printf "inserting ~s to back\n" new-word)
           (set! known-model (append known-model (list new-word)))
           (insert-last/data! t new-word (string-length new-word)))
         
         (define/public (delete-kth! k)
-          (printf "deleting ~s\n" (list-ref known-model k))
+          #;(printf "deleting ~s\n" (list-ref known-model k))
           (define offset (kth-offset k))
           (define node (search t offset))
           (delete! t node)
@@ -1642,9 +1640,9 @@
         ;; Returns the offset of the kth word in the model.
         (define (kth-offset k)
           (for/fold ([offset 0]) ([i (in-range k)]
-                                                 [word (in-list known-model)])
-                           (+ offset (string-length word))))
-          
+                                  [word (in-list known-model)])
+            (+ offset (string-length word))))
+        
         
         (define/public (delete-random!)
           (when (not (empty? known-model))
@@ -1658,7 +1656,7 @@
             (define offset (kth-offset k))
             (define node (search t offset))
             (define new-word (random-word))
-            (printf "Inserting ~s before ~s\n" new-word (node-data node))
+            #;(printf "Inserting ~s before ~s\n" new-word (node-data node))
             (insert-before/data! t node new-word (string-length new-word))
             (set! known-model (append (take known-model k)
                                       (list new-word)
@@ -1670,12 +1668,12 @@
             (define offset (kth-offset k))
             (define node (search t offset))
             (define new-word (random-word))
-            (printf "Inserting ~s after ~s\n" new-word (node-data node))
+            #;(printf "Inserting ~s after ~s\n" new-word (node-data node))
             (insert-after/data! t node new-word (string-length new-word))
             (set! known-model (append (take known-model (add1 k))
                                       (list new-word)
                                       (drop known-model (add1 k))))))
-          
+        
         
         ;; Concatenation.  Drop our existing tree and throw it at the other.
         (define/public (throw-at-monkey m2)
@@ -1790,9 +1788,9 @@
       (time
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
-         (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t) )
-           #;(check-rb-structure! t))
+         #;(when (= 1 (modulo i 10000))
+             (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t) )
+             #;(check-rb-structure! t))
          (insert-last/data! t word (string-length word))))
       
       (collect-garbage)
@@ -1804,9 +1802,9 @@
       (time
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
-         (when (= 1 (modulo i 10000))
-           (printf "deleting ~s words; tree bh=~s\n" i (tree-bh t))
-           #;(check-rb-structure! t))
+         #;(when (= 1 (modulo i 10000))
+             (printf "deleting ~s words; tree bh=~s\n" i (tree-bh t))
+             #;(check-rb-structure! t))
          (delete! t (tree-first t))))
       
       (check-rb-structure! t)
@@ -1824,17 +1822,16 @@
       (time
        (for ([word (in-list (force all-words))]
              [i (in-naturals)])
-         (when (= 1 (modulo i 10000))
-           (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t))
-           #;(check-rb-structure! t))
+         #;(when (= 1 (modulo i 10000))
+             (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t))
+             #;(check-rb-structure! t))
          (insert-first/data! t word (string-length word)))))))
   
   
   
   
   (define all-tests
-    mixed-tests
-    #;(test-suite "all-tests" 
+    (test-suite "all-tests" 
                 nil-tests rotation-tests insertion-tests deletion-tests search-tests
                 concat-tests 
                 split-tests
