@@ -1052,6 +1052,18 @@
                (loop (node-right node)))])))
   
   
+  ;; a little macro to help me measure how much time we spend in
+  ;; the body of an expression.
+  (define-syntax-rule (time-acc id body ...)
+    (let ([start (current-inexact-milliseconds)])
+      (call-with-values (lambda ()
+                          (let () body ...))
+                        (lambda vals
+                          (let ([stop (current-inexact-milliseconds)])
+                            (set! id (+ id (- stop start)))
+                            (apply values vals))))))
+  
+  
   (define nil-tests
     (test-suite
      "check properties of nil"
@@ -1667,7 +1679,30 @@
         (check-equal? (map first (tree-items l)) expected-l)
         (check-equal? (map first (tree-items r)) (rest 1+expected-r))
         (check-rb-structure! l)
-        (check-rb-structure! r)))))
+        (check-rb-structure! r)))
+     
+     
+     ;; Another exhaustive test.  Among N elements, split everywhere,
+     ;; and make sure we get the expected values on the left and right.
+     ;; Also print out how long it takes to do the actual splitting.
+     (test-case
+      "(1 ... n) ---split-k--> (1 ... k-1) (k+1 ...n)"
+      (printf "exhaustive split test...\n")
+      (define N 2000)
+      (define elts (for/list ([i (in-range N)]) i))
+      (define total-splitting-time 0)
+      (for ([n (in-range N)])
+        (define t (new-tree))
+        (for ([w (in-list elts)])
+          (insert-last/data! t w 1))
+        (define-values (l r) 
+          (time-acc 
+           total-splitting-time
+           (split! t (search t n))))
+        (define-values (expected-l 1+expected-r) (split-at elts n))
+        (check-equal? (map first (tree-items l)) expected-l)
+        (check-equal? (map first (tree-items r)) (rest 1+expected-r)))
+      (printf "time in split: ~a\n" total-splitting-time))))
      
   
 
