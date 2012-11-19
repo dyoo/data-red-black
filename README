@@ -1,5 +1,9 @@
 Notes.
 
+This is not thread safe yet.  In particular, the use of mutation with nil
+in delete is definitely not thread-safe.  I really do need to modify
+the code so each tree has its own concept of nil.
+
 
 ----------------------------------------------------------------------
 
