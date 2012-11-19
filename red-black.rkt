@@ -697,14 +697,20 @@
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
 ;;
-;; However, note that x must NOT be attached to the tree t1 or t2, or
-;; else this will introduce an illegal cycle.
+;; Note that x must NOT be attached to the tree t1 or t2, or else this
+;; will introduce an illegal cycle.
+;;
+;; Also, this should not depend on t1 and t2 having valid
+;; tree-first/tree-last pointers on entry; we compute this lazily due
+;; to how this is used by split!.
 (define (concat! t1 x t2)
   (cond
+
     [(nil? (tree-root t1))
      (set-node-left! x nil)
      (set-node-right! x nil)
      (set-node-subtree-width! x (node-self-width x))
+     (force-tree-first! t2)
      (insert-first! t2 x)
      t2]
     
@@ -712,6 +718,7 @@
      (set-node-left! x nil)
      (set-node-right! x nil)
      (set-node-subtree-width! x (node-self-width x))
+     (force-tree-last! t1)
      (insert-last! t1 x)
      t1]
     
@@ -804,6 +811,10 @@
              [R (node->tree/bh (node-right x) x-child-bh)])
     (cond
       [(nil? ancestor)
+       (force-tree-first! L)
+       (force-tree-last! L)
+       (force-tree-first! R)
+       (force-tree-last! R)
        (values L R)]
       [else
        (define new-ancestor (node-parent ancestor))
@@ -835,6 +846,26 @@
                (concat! R ancestor subtree))])])))
 
 
+;; force-tree-first!: tree -> void
+;; INTERNAL
+;; Force tree-first's value.
+;; For non-empty trees, it's set to nil only in node->tree/bh.
+(define (force-tree-first! t)
+  (when (and (not (nil? (tree-root t)))
+             (nil? (tree-first t)))
+    (set-tree-first! t (minimum (tree-root t)))))
+
+
+;; force-tree-last!: tree -> void
+;; INTERNAL
+;; Force tree-last's value.
+;; For non-empty trees, it's set to nil only in node->tree/bh.
+(define (force-tree-last! t)
+  (when (and (not (nil? (tree-root t)))
+             (nil? (tree-last t)))
+    (set-tree-last! t (maximum (tree-root t)))))
+  
+
 ;; detach!: node -> void
 ;; INTERNAL
 ;; Disconnects n from its parent.
@@ -852,8 +883,11 @@
 
 ;; node->tree/bh: node natural -> tree
 ;; INTERNAL: for use by split! only.
-;; Create a node out of a tree, where we should already know the black
-;; height of the tree rooted at a-node.
+;; Create a partially-instantiated node out of a tree, where we should
+;; already know the black height of the tree rooted at a-node.
+;;
+;; Note that the first and last of the tree have not been initialized
+;; here yet.
 (define (node->tree/bh a-node bh)
   (cond
     [(nil? a-node)
@@ -863,8 +897,8 @@
      (set-node-parent! a-node nil)
      (set-node-color! a-node black)
      (tree a-node
-           (minimum a-node)
-           (maximum a-node)
+           nil
+           nil
            new-bh)]))
 
 
