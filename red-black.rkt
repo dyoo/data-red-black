@@ -454,7 +454,7 @@
   
   (define y z)
   (define y-original-color (node-color y))
-  (let-values ([(x y-original-color)
+  (let-values ([(x y-original-color nil-parent)
                 (cond
                   ;; If either the left or right child of z is nil,
                   ;; deletion is merely replacing z with its other child x.
@@ -462,23 +462,23 @@
                   [(nil? (node-left z))
                    (define z.p (node-parent z))
                    (define x (node-right z))
-                   (transplant-for-delete! a-tree z x)
+                   (define nil-parent (transplant-for-delete! a-tree z x))
                    ;; At this point, we need to repair the statistic where
                    ;; where the replacement happened, since z's been replaced with x.
                    ;; The x subtree is ok, so we need to begin the statistic repair
                    ;; at z.p.
                    (when (not (nil? z.p))
                      (update-subtree-width-up-to-root! z.p))
-                   (values x y-original-color)]
+                   (values x y-original-color nil-parent)]
                   
                   ;; This case is symmetric with the previous case.
                   [(nil? (node-right z))
                    (define z.p (node-parent z))
                    (define x (node-left z))
-                   (transplant-for-delete! a-tree z x)
+                   (define nil-parent (transplant-for-delete! a-tree z x))
                    (when (not (nil? z.p))
                      (update-subtree-width-up-to-root! z.p))
-                   (values x y-original-color)]
+                   (values x y-original-color nil-parent)]
                   
                   ;; The hardest case is when z has non-nil left and right.
                   ;; We take the minimum of z's right subtree and replace
@@ -488,41 +488,49 @@
                           [y-original-color (node-color y)])
                      ;; At this point, y's left is nil by definition of minimum.
                      (define x (node-right y))
-                     (cond
-                       [(eq? (node-parent y) z)
-                        ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
-                        ;; Be aware that x here can be nil, in which case we've now
-                        ;; changed the contents of nil.
-                        (set-node-parent! x y)  ;; FIXME: nil potentially mutated here
-                        ]
-                       [else
-                        (transplant-for-delete! a-tree y (node-right y))
-                        (set-node-right! y (node-right z))
-                        (set-node-p! (node-right y) y)])
+                     (define nil-parent
+                       (cond
+                         [(eq? (node-parent y) z)
+                          ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
+                          ;; Be aware that x here can be nil, in which case we've now
+                          ;; changed the contents of nil.
+                          (cond [(nil? x)
+                                 (set-node-parent! x y)
+                                 y]
+                                [else
+                                 (set-node-parent! x y)
+                                 nil])]
+                         [else
+                          (transplant-for-delete! a-tree y (node-right y))
+                          (set-node-right! y (node-right z))
+                          (set-node-p! (node-right y) y)
+                          nil]))
                      
+                     ;; y can't be nil here, so we don't need to record this.
                      (transplant-for-delete! a-tree z y)
                      (set-node-left! y (node-left z))
                      (set-node-p! (node-left y) y)
                      (set-node-color! y (node-color z))
                      (update-subtree-width-up-to-root! (node-parent x))
-                     (values x y-original-color))])])
+                     (values x y-original-color nil-parent))])])
     (cond [(eq? black y-original-color)
-           (fix-after-delete! a-tree x)]
+           (fix-after-delete! a-tree x nil-parent)]
           [else
            (void)])
-    ;; After all this is done, just force nil's parent to be itself again
-    ;; (just in case it got munged during delete)
-    (set-node-parent! nil nil) ;;; FIXME: nil mutated here
     
-    ))
+    (set-node-parent! nil nil)))
 
 
 
 
-;; transplant-for-delete: tree node (U node nil) -> void
+
+;; transplant-for-delete: tree node (U node nil) -> (U nil node)
 ;; INTERNAL
 ;; Replaces the instance of node u in a-tree with v.
-;; Note: if v is nil, this sets nil's parent pointer too.
+;;
+;; If v is nil, then rather than mutate nil, it returns
+;; a non-nil node that should be treated as nil's parent.
+;; Otherwise, returns nil.
 (define (transplant-for-delete! a-tree u v)
   (define u.p (node-parent u))
   (cond [(nil? u.p)
@@ -531,8 +539,13 @@
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (set-node-parent! v u.p) ;; FIXME: nil potentially mutated here
-  )
+  (cond [(nil? v)
+         (set-node-parent! v u.p)
+         u.p]
+        [else
+         (set-node-parent! v u.p)
+         nil]))
+
 
 
 ;; fix-after-delete!: tree node -> void
@@ -544,62 +557,68 @@
 ;; * unbalanced black paths
 ;; * red-red links
 ;; 
-(define (fix-after-delete! a-tree x)
+(define (fix-after-delete! a-tree x nil-parent)
+  (when (and (nil? x) (not (eq? (node-parent x) nil-parent)))
+    (error 'fix-after-delete! "you screwed up somewhere!"))
+  (define (n-p x)
+    (if (nil? x)
+        nil-parent
+        (node-parent x)))
   (let loop ([x x]
              [early-escape? #f])
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (black? x))
            (cond
-             [(eq? x (node-left (node-parent x)))
-              (define w (node-right (node-parent x)))
+             [(eq? x (node-left (n-p x)))
+              (define w (node-right (n-p x)))
               (define w-1 (cond [(eq? (node-color w) red)
                                  (set-node-color! w black)
-                                 (set-node-color! (node-parent x) red)
-                                 (left-rotate! a-tree (node-parent x))
-                                 (node-right (node-parent x))]
+                                 (set-node-color! (n-p x) red)
+                                 (left-rotate! a-tree (n-p x))
+                                 (node-right (n-p x))]
                                 [else
                                  w]))
               (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
-                     (loop (node-parent x) #f)]
+                     (loop (n-p x) #f)]
                     [else
                      (define w-2 (cond [(black? (node-right w-1))
                                         (set-node-color! (node-left w-1) black)
                                         (set-node-color! w-1 red)
                                         (right-rotate! a-tree w-1)
-                                        (node-right (node-parent x))]
+                                        (node-right (n-p x))]
                                        [else
                                         w-1]))
-                     (set-node-color! w-2 (node-color (node-parent x)))
-                     (set-node-color! (node-parent x) black)
+                     (set-node-color! w-2 (node-color (n-p x)))
+                     (set-node-color! (n-p x) black)
                      (set-node-color! (node-right w-2) black)
-                     (left-rotate! a-tree (node-parent x))
+                     (left-rotate! a-tree (n-p x))
                      (loop (tree-root a-tree) 
                            #t)])]
              [else
-              (define w (node-left (node-parent x)))
+              (define w (node-left (n-p x)))
               (define w-1 (cond [(red? w)
                                  (set-node-color! w black)
-                                 (set-node-color! (node-parent x) red)
-                                 (right-rotate! a-tree (node-parent x))
-                                 (node-left (node-parent x))]
+                                 (set-node-color! (n-p x) red)
+                                 (right-rotate! a-tree (n-p x))
+                                 (node-left (n-p x))]
                                 [else
                                  w]))
               (cond [(and (black? (node-left w-1)) (black? (node-right w-1)))
                      (set-node-color! w-1 red)
-                     (loop (node-parent x) #f)]
+                     (loop (n-p x) #f)]
                     [else
                      (define w-2 (cond [(black? (node-left w-1))
                                         (set-node-color! (node-right w-1) black)
                                         (set-node-color! w-1 red)
                                         (left-rotate! a-tree w-1)
-                                        (node-left (node-parent x))]
+                                        (node-left (n-p x))]
                                        [else
                                         w-1]))
-                     (set-node-color! w-2 (node-color (node-parent x)))
-                     (set-node-color! (node-parent x) black)
+                     (set-node-color! w-2 (node-color (n-p x)))
+                     (set-node-color! (n-p x) black)
                      (set-node-color! (node-left w-2) black)
-                     (right-rotate! a-tree (node-parent x))
+                     (right-rotate! a-tree (n-p x))
                      (loop (tree-root a-tree) 
                            #t)])])]
           [else
