@@ -2052,9 +2052,20 @@
              [i (in-naturals)])
          #;(when (= 1 (modulo i 10000))
              (printf "loaded ~s words; tree bh=~s\n" i (tree-bh t) )
-             #;(check-rb-structure! t))
+             (check-rb-structure! t))
          (insert-last/data! t word (string-length word))))
-      
+
+
+      ;; We might be curious as to the overhead of the tree structure.
+      ;; (of course, it's worth it because we are dealing with a dynamic set here.)
+      ;; Still, let's compare with inserting into a native hash:
+      (printf "just for comparison: inserting in a native hash:\n")
+      (let ([ht (make-hash)])
+        (time
+          (for/fold ([acc 0]) ([word (in-list (force all-words))])
+            (hash-set! ht acc word)
+            (+ acc (string-length word)))))
+
       (collect-garbage)
       (collect-garbage)
       (collect-garbage)
@@ -2066,7 +2077,7 @@
              [i (in-naturals)])
          #;(when (= 1 (modulo i 10000))
              (printf "deleting ~s words; tree bh=~s\n" i (tree-bh t))
-             #;(check-rb-structure! t))
+             (check-rb-structure! t))
          (delete! t (tree-first t))))
       
       (check-rb-structure! t)
