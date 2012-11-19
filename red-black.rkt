@@ -251,8 +251,7 @@
     [else    
      (define y (maximum (node-left before)))
      (set-node-right! y x)
-     (set-node-parent! x y)])
-  
+     (set-node-parent! x y)])  
   (set-node-color! x red)
   (when (eq? before (tree-first a-tree))
     (set-tree-first! a-tree x))
@@ -688,22 +687,27 @@
   (define t2-bh (tree-bh t2))
   (cond
     [(and (nil? (tree-root t1)) (nil? (tree-root t2)))
+     (set-node-left! x nil)
+     (set-node-right! x nil)
+     (set-node-subtree-width! x (node-self-width x))
      (insert-first! t1 x)
-     (update-statistics-up-to-root! t1 x)
      t1]
     
     [(nil? (tree-root t1))
-     (insert-before! t2 (tree-first t2) x)
-     (update-statistics-up-to-root! t2 x)
+     (set-node-left! x nil)
+     (set-node-right! x nil)
+     (set-node-subtree-width! x (node-self-width x))
+     (insert-first! t2 x)
      t2]
     
     [(nil? (tree-root t2))
-     (insert-after! t1 (tree-last t1) x)
-     (update-statistics-up-to-root! t1 x)
+     (set-node-left! x nil)
+     (set-node-right! x nil)
+     (set-node-subtree-width! x (node-self-width x))
+     (insert-last! t1 x)
      t1]
     
-    [(>= t1-bh t2-bh)
-     
+    [(>= t1-bh t2-bh)     
      (set-tree-last! t1 (tree-last t2))
      (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
      (define b (tree-root t2))
@@ -785,8 +789,9 @@
        (define new-ancestor (node-parent ancestor))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
        (define subtree (node->tree/bh (node-left ancestor)))
-       (set-node-left! ancestor nil)
-       (set-node-right! ancestor nil)
+       ;(set-node-color! ancestor red)
+       ;(set-node-left! ancestor nil)
+       ;(set-node-right! ancestor nil)
        (loop new-ancestor 
              new-leftward?
              (concat! subtree ancestor L)
@@ -795,8 +800,9 @@
        (define new-ancestor (node-parent ancestor))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
        (define subtree (node->tree/bh (node-right ancestor)))
-       (set-node-left! ancestor nil)
-       (set-node-right! ancestor nil)
+       ;(set-node-color! ancestor red)
+       ;(set-node-left! ancestor nil)
+       ;(set-node-right! ancestor nil)
        (loop new-ancestor
              new-leftward?
              L
