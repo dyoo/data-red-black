@@ -531,20 +531,8 @@
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (set-node-p! v u.p))
-
-
-(define (transplant-for-concat! a-tree u v)
-  (define u.p (node-parent u))
-  (cond [(nil? u.p)
-         (set-tree-root! a-tree v)]
-        [(eq? u (node-left u.p))
-         (set-node-left! u.p v)]
-        [else
-         (set-node-right! u.p v)])
-  (set-node-p! v u.p))
-
-
+  (set-node-parent! v u.p) ;; FIXME: nil potentially mutated here
+  )
 
 
 ;; fix-after-delete!: tree node -> void
@@ -792,6 +780,20 @@
        (update-subtree-width-up-to-root! x)
        (fix-after-insert! t2 x)
        t2])]))
+
+
+;; transplant-for-concat!: tree node node -> void
+;; INTERNAL
+;; Replaces node u in a-tree with v.
+(define (transplant-for-concat! a-tree u v)
+  (define u.p (node-parent u))
+  (cond [(nil? u.p)
+         (set-tree-root! a-tree v)]
+        [(eq? u (node-left u.p))
+         (set-node-left! u.p v)]
+        [else
+         (set-node-right! u.p v)])
+  (set-node-p! v u.p))
 
 
 
