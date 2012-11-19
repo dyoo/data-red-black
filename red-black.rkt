@@ -710,11 +710,13 @@
      (set-node-left! x nil)
      (set-node-right! x nil)
      (set-node-subtree-width! x (node-self-width x))
+     ;; if t2 is lazy about having a tree-first, force it.
      (force-tree-first! t2)
      (insert-first! t2 x)
      t2]
     
     [(nil? (tree-root t2))
+     ;; symmetric with the case above:
      (set-node-left! x nil)
      (set-node-right! x nil)
      (set-node-subtree-width! x (node-self-width x))
@@ -800,6 +802,10 @@
 ;; split!: tree node -> (values tree tree)
 ;; Partitions the tree into two trees: the predecessors of x, and the
 ;; successors of x.
+;;
+;; Note: during the loop, the L and R trees do not necessarily have
+;; a valid tree-first or tree-last.  I want to avoid recomputing
+;; it for each fresh subtree I construct.
 (define (split! a-tree x)
   (define x-child-bh (computed-black-height (node-left x)))
   ;; The loop walks the ancestors of x, adding the left and right
@@ -851,8 +857,7 @@
 ;; Force tree-first's value.
 ;; For non-empty trees, it's set to nil only in node->tree/bh.
 (define (force-tree-first! t)
-  (when (and (not (nil? (tree-root t)))
-             (nil? (tree-first t)))
+  (when (nil? (tree-first t))
     (set-tree-first! t (minimum (tree-root t)))))
 
 
@@ -861,8 +866,7 @@
 ;; Force tree-last's value.
 ;; For non-empty trees, it's set to nil only in node->tree/bh.
 (define (force-tree-last! t)
-  (when (and (not (nil? (tree-root t)))
-             (nil? (tree-last t)))
+  (when (nil? (tree-last t))
     (set-tree-last! t (maximum (tree-root t)))))
   
 
