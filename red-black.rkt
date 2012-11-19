@@ -495,7 +495,7 @@
                           ;; Be aware that x here can be nil, in which case we've now
                           ;; changed the contents of nil.
                           (cond [(nil? x)
-                                 (set-node-parent! x y)
+                                 #;(set-node-parent! x y)
                                  y]
                                 [else
                                  (set-node-parent! x y)
@@ -512,11 +512,12 @@
                      (set-node-left! y (node-left z))
                      (set-node-p! (node-left y) y)
                      (set-node-color! y (node-color z))
-                     (update-subtree-width-up-to-root! (node-parent x))
+                     (update-subtree-width-up-to-root! 
+                      (if (nil? x) nil-parent (node-parent x)))
                      (values x y-original-color nil-parent))])])
     
-    (when (not (eq? (node-parent nil) nil-parent))
-      (error 'fix-after-delete! "delete!: you screwed up somewhere!"))
+    #;(when (not (eq? (node-parent nil) nil-parent))
+        (error 'fix-after-delete! "delete!: you screwed up somewhere!"))
 
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x nil-parent)]
@@ -545,7 +546,7 @@
         [else
          (set-node-right! u.p v)])
   (cond [(nil? v)
-         (set-node-parent! v u.p)
+         #;(set-node-parent! v u.p)
          u.p]
         [else
          (set-node-parent! v u.p)
@@ -571,6 +572,9 @@
   (define (check-nil!)
     (when (not (eq? (node-parent nil) nil-parent))
       (error 'fix-after-delete! "fix-after-delete!: you screwed up somewhere!")))
+
+
+  (set-node-parent! nil nil-parent)
 
   (check-nil!)
   
