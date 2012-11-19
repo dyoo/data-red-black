@@ -615,19 +615,12 @@
        (loop (node-parent n))])))
 
 
-;; subtree-width: node -> natural
-;; INTERNAL
-;; Return the subtree width of the tree rooted at n.
-(define-syntax-rule (subtree-width a-node)
-  (let ([n a-node])
-    (if (nil? n)
-        0
-        (node-subtree-width n))))
 
 
 ;; search: tree natural -> (U node nil)
 ;; Search for the node closest to offset.
-;; Making the total length of the left tree at least offset, if possible.
+;; The total length of the left subtree will be at least offset, if possible.
+;; Returns nil if the offset is not within the tree.
 (define (search a-tree offset)
   (let loop ([offset offset]
              [a-node (tree-root a-tree)])
@@ -635,7 +628,7 @@
       [(nil? a-node) nil]
       [else
        (define left (node-left a-node))
-       (define left-subtree-width (subtree-width left))
+       (define left-subtree-width (node-subtree-width left))
        (cond [(< offset left-subtree-width)
               (loop offset left)]
              [else 
@@ -700,11 +693,12 @@
 ;; concat!: tree node tree -> tree
 ;; INTERNAL
 ;; Joins t1, x and t2 together, using x as the pivot.
+;;
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
 ;;
-;; Note: x must NOT be attached to the tree t1 or t2, or else this will
-;; introduce an illegal cycle.
+;; However, note that x must NOT be attached to the tree t1 or t2, or
+;; else this will introduce an illegal cycle.
 (define (concat! t1 x t2)
   (cond
     [(nil? (tree-root t1))
@@ -735,11 +729,18 @@
        (set-node-parent! a x)
        (set-node-right! x b)
        (set-node-parent! b x)
+
+       ;; Possible TODO: Ron Wein recommends a lazy approach here,
+       ;; rather than recompute the metadata eagerly.  I haven't done
+       ;; so yet, as I have to measure whether or not it actually
+       ;; helps.
        (update-subtree-width-up-to-root! t1 x)
+
        (fix-after-insert! t1 x)
        t1]
       
       [else
+       ;; Symmetric case:
        (set-tree-first! t2 (tree-first t1))
        (define a (tree-root t1))
        (define b (find-leftmost-black-node-with-bh t2 t1-bh))
@@ -757,7 +758,8 @@
 
 ;; find-rightmost-black-node-with-bh: tree positive-integer -> node
 ;; INTERNAL
-;; Finds the rightmost black node with the particular black height we're looking for.
+;; Finds the rightmost black node with the particular black height
+;; we're looking for.
 (define (find-rightmost-black-node-with-bh a-tree bh)
   (let loop ([n (tree-root a-tree)]
              [current-height (tree-bh a-tree)])
@@ -773,7 +775,8 @@
 
 ;; find-leftmost-black-node-with-bh: tree positive-integer -> node
 ;; INTERNAL
-;; Finds the rightmost black node with the particular black height we're looking for.
+;; Finds the rightmost black node with the particular black height
+;; we're looking for.
 (define (find-leftmost-black-node-with-bh a-tree bh)
   (let loop ([n (tree-root a-tree)]
              [current-height (tree-bh a-tree)])
@@ -797,8 +800,6 @@
   (let loop ([ancestor (node-parent x)]
              [ancestor-child-bh (if (black? x) (add1 x-child-bh) x-child-bh)]
              [coming-from-the-right? (eq? (node-right (node-parent x)) x)]
-             ;; initially, the left and right subtrees have the
-             ;; immediate predecessors and successors.
              [L (node->tree/bh (node-left x) x-child-bh)]
              [R (node->tree/bh (node-right x) x-child-bh)])
     (cond
@@ -810,8 +811,11 @@
                                          (add1 ancestor-child-bh)
                                          ancestor-child-bh))
        (define new-coming-from-the-right? (eq? (node-right new-ancestor) ancestor))
-       ;; Important!  Make sure ancestor is detached.
+
+       ;; Important!  Make sure ancestor is detached.  This is
+       ;; required by concat!, or else Bad Things happen.
        (detach! ancestor)
+
        (cond
         [coming-from-the-right?
          (define subtree (node->tree/bh (node-left ancestor) 
@@ -829,6 +833,7 @@
                new-coming-from-the-right?
                L
                (concat! R ancestor subtree))])])))
+
 
 ;; detach!: node -> void
 ;; INTERNAL
@@ -1908,14 +1913,16 @@
                                       (drop known-model (add1 k))))))
         
         
-        ;; Concatenation.  Drop our existing tree and throw it at the other.
+        ;; Concatenation.  Drop our existing tree and throw it at the
+        ;; other m2 monkey.
         (define/public (throw-all-at-monkey m2)
           (send m2 catch-and-concat-at-front t known-model)
           (set! t (new-tree))
           (set! known-model '()))
 
-        ;; Splitting/concatenation.  Split what we've got, keep the left,
-        ;; and throw the right to our friend m2.
+
+        ;; Splitting/concatenation.  Split what we've got, keep the
+        ;; left, and throw the right to our friend m2.
         (define/public (throw-some-at-monkey m2)
           (when (not (empty? known-model))
             (define k (random (length known-model)))
@@ -1930,7 +1937,7 @@
         (define/public (catch-and-concat-at-front other-t other-known-model)
           (set! t (join! other-t t))
           (set! known-model (append other-known-model known-model)))
-        
+
         
         (define/public (check-consistency!)
           ;; Check that the structure is consistent with our model.
@@ -1986,7 +1993,8 @@
   
   (define angry-monkey-pair-test
     (test-suite
-     "Simulation of a pair of angry monkeys bashing at the tree.  Occasionally they'll throw things at each other."
+     "Simulation of a pair of angry monkeys bashing at the tree.
+      Occasionally they'll throw things at each other."
      (test-begin
       (printf "monkey tests paired...\n")
       (define number-of-operations 100)
