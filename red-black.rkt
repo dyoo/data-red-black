@@ -223,7 +223,7 @@
      (set-node-left! first x)
      (set-node-parent! x first)
      (set-tree-first! a-tree x)])
-  (update-subtree-width-up-to-root! a-tree (node-parent x))
+  (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -244,7 +244,7 @@
      (set-node-right! last x)
      (set-node-parent! x last)
      (set-tree-last! a-tree x)])
-  (update-subtree-width-up-to-root! a-tree (node-parent x))
+  (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -265,7 +265,7 @@
   (set-node-color! x red)
   (when (eq? before (tree-first a-tree))
     (set-tree-first! a-tree x))
-  (update-subtree-width-up-to-root! a-tree (node-parent x))
+  (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -286,7 +286,7 @@
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
-  (update-subtree-width-up-to-root! a-tree (node-parent x))
+  (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
 
 
@@ -458,7 +458,7 @@
                    ;; The x subtree is ok, so we need to begin the statistic repair
                    ;; at z.p.
                    (when (not (nil? z.p))
-                     (update-subtree-width-up-to-root! a-tree z.p))
+                     (update-subtree-width-up-to-root! z.p))
                    (values x y-original-color)]
                   
                   ;; This case is symmetric with the previous case.
@@ -467,7 +467,7 @@
                    (define x (node-left z))
                    (transplant! a-tree z x)
                    (when (not (nil? z.p))
-                     (update-subtree-width-up-to-root! a-tree z.p))
+                     (update-subtree-width-up-to-root! z.p))
                    (values x y-original-color)]
                   
                   ;; The hardest case is when z has non-nil left and right.
@@ -493,7 +493,7 @@
                      (set-node-left! y (node-left z))
                      (set-node-parent! (node-left y) y)
                      (set-node-color! y (node-color z))
-                     (update-subtree-width-up-to-root! a-tree (node-parent x))
+                     (update-subtree-width-up-to-root! (node-parent x))
                      (values x y-original-color))])])
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x)]
@@ -606,7 +606,7 @@
 ;; Updates the subtree width statistic from a-node upward to the root.
 ;;
 ;; * The subtree width field of a-node and its ancestors should be updated.
-(define (update-subtree-width-up-to-root! a-tree a-node)
+(define (update-subtree-width-up-to-root! a-node)
   (let loop ([n a-node])
     (cond
       [(nil? n)
@@ -744,7 +744,7 @@
        ;; rather than recompute the metadata eagerly.  I haven't done
        ;; so yet, as I have to measure whether or not it actually
        ;; helps.
-       (update-subtree-width-up-to-root! t1 x)
+       (update-subtree-width-up-to-root! x)
 
        (fix-after-insert! t1 x)
        t1]
@@ -760,7 +760,7 @@
        (set-node-parent! a x)
        (set-node-right! x b)
        (set-node-parent! b x)
-       (update-subtree-width-up-to-root! t2 x)
+       (update-subtree-width-up-to-root! x)
        (fix-after-insert! t2 x)
        t2])]))
 
