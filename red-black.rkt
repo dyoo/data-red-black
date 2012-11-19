@@ -208,7 +208,8 @@
 
 ;; insert-first!: tree node -> void
 ;; Insert node x as the first element in the tree.
-;; x is assumed to be a singleton element.
+;; x is assumed to be a singleton element whose fields
+;; are valid.
 (define (insert-first! a-tree x)
   (set-node-color! x red)
   (cond
@@ -228,7 +229,8 @@
 
 ;; insert-last!: tree node -> void
 ;; Insert node x as the last element in the tree.
-;; x is assumed to be a singleton element.
+;; x is assumed to be a singleton element whose fields
+;; are valid.
 (define (insert-last! a-tree x)
   (set-node-color! x red)
   (cond
@@ -248,7 +250,8 @@
 ;; insert-before!: tree node node -> void
 ;; Insert node x before element 'before' of the tree.
 ;; x will be the immmediate predecessor of before upon completion.
-;; x is assumed to be a singleton element.
+;; x is assumed to be a singleton element whose fields
+;; are valid.
 (define (insert-before! a-tree before x)
   (cond
     [(nil? (node-left before))
@@ -268,6 +271,8 @@
 ;; insert-after!: tree node node -> void
 ;; Insert node x after element 'after' of the tree.
 ;; x will be the immmediate successor of after upon completion.
+;; x is assumed to be a singleton element whose fields
+;; are valid.
 (define (insert-after! a-tree after x)
   (cond
     [(nil? (node-right after))
@@ -277,7 +282,6 @@
      (define y (minimum (node-right after)))
      (set-node-left! y x)
      (set-node-parent! x y)])
-  
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
@@ -694,13 +698,6 @@
   (define t1-bh (tree-bh t1))
   (define t2-bh (tree-bh t2))
   (cond
-    [(and (nil? (tree-root t1)) (nil? (tree-root t2)))
-     (set-node-left! x nil)
-     (set-node-right! x nil)
-     (set-node-subtree-width! x (node-self-width x))
-     (insert-first! t1 x)
-     t1]
-    
     [(nil? (tree-root t1))
      (set-node-left! x nil)
      (set-node-right! x nil)
