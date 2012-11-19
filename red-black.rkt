@@ -1143,24 +1143,20 @@
     
     ;; The maximum and minimum should be correctly linked
     ;; as tree-last and tree-first, respectively:
-    (check-eq? (tree-first a-tree)
-               (if (nil? (tree-root a-tree))
-                   nil 
-                   (minimum (tree-root a-tree)))
-               (format "in ~a, minimum (~a) is not first (~a)" 
-                       (tree->list a-tree)
-                       (node-data (if (nil? (tree-root a-tree)) 
-                                      nil 
-                                      (minimum (tree-root a-tree))))
-                       (node-data (tree-first a-tree))))
-    (check-eq? (tree-last a-tree)
-               (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree)))
-               (format "in ~a, maximum (~a) is not last (~a)"
-                       (tree->list a-tree)
-                       (node-data (if (nil? (tree-root a-tree))
-                                      nil 
-                                      (maximum (tree-root a-tree))))
-                       (node-data (tree-last a-tree))))
+    (let ([correct-tree-first (if (nil? (tree-root a-tree))
+                                  nil 
+                                  (minimum (tree-root a-tree)))])
+      (check-eq? (tree-first a-tree)
+                 correct-tree-first
+                 (format "minimum (~a) is not first (~a)" 
+                         (node-data correct-tree-first)
+                         (node-data (tree-first a-tree)))))
+    (let ([correct-tree-last (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree)))])
+      (check-eq? (tree-last a-tree)
+                 correct-tree-last
+                 (format "maximum (~a) is not last (~a)"
+                         (node-data correct-tree-last)
+                         (node-data (tree-last a-tree)))))
     
     
     ;; The left and right sides should be black-balanced, for all subtrees.
@@ -1178,10 +1174,9 @@
     ;; The observed black height should equal that of the recorded one
     (check-equal? (tree-bh a-tree) 
                   observed-black-height
-                  (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
+                  (format "rb violation: observed height ~a is not equal to recorded height ~a"
                           observed-black-height 
-                          (tree-bh a-tree)
-                          (tree->list a-tree)))
+                          (tree-bh a-tree)))
     
     
     ;; The overall height must be less than 2 lg(n+1)
@@ -1857,30 +1852,7 @@
         (check-equal? (map first (tree-items l)) expected-l)
         (check-equal? (map first (tree-items r)) (rest 1+expected-r))
         (check-rb-structure! l)
-        (check-rb-structure! r)))
-     
-     
-     ;; Another exhaustive test.  Among N elements, split everywhere,
-     ;; and make sure we get the expected values on the left and right.
-     ;; Also print out how long it takes to do the actual splitting.
-     (test-case
-      "(1 ... n) ---split-k--> (1 ... k-1) (k+1 ...n)"
-      (printf "exhaustive split test...\n")
-      (define N 2000)
-      (define elts (for/list ([i (in-range N)]) i))
-      (define total-splitting-time 0)
-      (for ([n (in-range N)])
-        (define t (new-tree))
-        (for ([w (in-list elts)])
-          (insert-last/data! t w 1))
-        (define-values (l r) 
-          (time-acc 
-           total-splitting-time
-           (split! t (search t n))))
-        (define-values (expected-l 1+expected-r) (split-at elts n))
-        (check-equal? (map first (tree-items l)) expected-l)
-        (check-equal? (map first (tree-items r)) (rest 1+expected-r)))
-      (printf "time in split: ~a\n" total-splitting-time))))
+        (check-rb-structure! r)))))
      
   
 
@@ -1921,19 +1893,17 @@
       (check-eq? (minimum nil) nil))))
   
      
-  (define dict-words-tests
+  (define exhaustive-search-tests
     (test-suite
-     "Working with a lot of words.  Insert and search tests."
+     "Working with a lot of words.  Insert and search tests, to make sure search works."
      (test-begin
       (define t (new-tree))
-      (printf "dict words test\n")
+      (printf "search test...\n")
       (for ([word (in-list (force all-words))])
         (insert-last/data! t word (string-length word)))
       
-      (printf "checking structure\n")
       (check-rb-structure! t)
-      
-      (printf "searching\n")
+
       (define search-time-1 0)
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data
@@ -1942,16 +1912,14 @@
         (+ offset (string-length word)))
       (printf "done; total search time: ~a\n" search-time-1))
      
-     
      ;; Do it backwards
      (test-begin
       (define t (new-tree))
       (for ([word (in-list (reverse (force all-words)))])
         (insert-first/data! t word (string-length word)))
-      (printf "checking structure\n")
+      (printf "search test (backwards)...\n")
       (check-rb-structure! t)
       (define search-time-2 0)
-      (printf "searching\n")
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
         (check-equal? (node-data 
                        (time-acc search-time-2 (search t offset)))
@@ -2104,12 +2072,16 @@
       (for ([i (in-range number-of-iterations)])
         (define m (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
-          (case (random 7)
+          (case (random 12)
             [(0 1)
              (send m insert-front!)]
             [(2 3)
              (send m insert-back!)]
-            [(4 5 6)
+            [(4 5)
+             (send m insert-after/random!)]
+            [(6 7)
+             (send m insert-before/random!)]
+            [(8 9 10 11)
              (send m delete-random!)])
           (send m check-consistency!))))))
   
@@ -2157,7 +2129,9 @@
 
   (define angry-monkey-pair-test-parallel
     (test-suite
-     "Simulation of a pair of angry monkeys bashing at the tree.
+     ;; What do you call a group of monkeys?  A troop!
+     ;; (http://www.npwrc.usgs.gov/about/faqs/animals/names.htm)
+     "Simulation of a troop of angry monkeys bashing at the tree.
       They should not see each other."
      (test-begin
       (printf "monkey tests parallel...\n")
@@ -2190,8 +2164,6 @@
       (printf "done\n"))))
   
 
-  
-  
   
   
   ;; Stress test
@@ -2275,6 +2247,31 @@
          (insert-first/data! t word (string-length word)))))))
   
   
+  (define exhaustive-split-test
+    (test-suite
+     "exhaustive split test"
+     ;; Another exhaustive test.  Among N elements, split everywhere,
+     ;; and make sure we get the expected values on the left and right.
+     ;; Also print out how long it takes to do the actual splitting.
+     (test-case
+      "(1 ... n) ---split-k--> (1 ... k-1) (k+1 ...n)"
+      (printf "exhaustive split test...\n")
+      (define N 2000)
+      (define elts (for/list ([i (in-range N)]) i))
+      (define total-splitting-time 0)
+      (for ([n (in-range N)])
+        (define t (new-tree))
+        (for ([w (in-list elts)])
+          (insert-last/data! t w 1))
+        (define-values (l r) 
+          (time-acc 
+           total-splitting-time
+           (split! t (search t n))))
+        (define-values (expected-l 1+expected-r) (split-at elts n))
+        (check-equal? (map first (tree-items l)) expected-l)
+        (check-equal? (map first (tree-items r)) (rest 1+expected-r)))
+      (printf "time in split: ~a\n" total-splitting-time))))
+  
   
   
   (define all-tests
@@ -2289,13 +2286,15 @@
                 predecessor-successor-min-max-tests
                 split-tests
                 mixed-tests
+                ;; The following tests are a bit more expensive.  Wait a while.
                 angry-monkey-test-1 
                 angry-monkey-test-2 
                 angry-monkey-pair-test
                 angry-monkey-pair-test-parallel
-                dict-words-tests
-                exhaustive-structure-test
-                ))
+                exhaustive-search-tests
+                exhaustive-split-test
+                exhaustive-structure-test))
+  
   (void
    (printf "Running test suite.\nWarning: this suite can run very slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
