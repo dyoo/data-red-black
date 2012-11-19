@@ -521,6 +521,14 @@
 
 
 ;; fix-after-delete!: tree node -> void
+;; INTERNAL
+;; Correct several possible invariant-breaks after a black node
+;; has been removed from the tree.  These include:
+;;
+;; * turning the root red
+;; * unbalanced black paths
+;; * red-red links
+;; 
 (define (fix-after-delete! a-tree x)
   (let loop ([x x]
              [early-escape? #f])
@@ -589,8 +597,7 @@
                       (not early-escape?))
              (set-tree-bh! a-tree (sub1 (tree-bh a-tree))))
            
-           (unless (nil? x)
-             (set-node-color! x black))])))
+           (set-node-color! x black)])))
 
 
 ;; update-subtree-width-up-to-root!: tree node natural? -> void
@@ -691,6 +698,7 @@
 
 
 ;; concat!: tree node tree -> tree
+;; INTERNAL
 ;; Joins t1, x and t2 together, using x as the pivot.
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
@@ -748,6 +756,7 @@
 
 
 ;; find-rightmost-black-node-with-bh: tree positive-integer -> node
+;; INTERNAL
 ;; Finds the rightmost black node with the particular black height we're looking for.
 (define (find-rightmost-black-node-with-bh a-tree bh)
   (let loop ([n (tree-root a-tree)]
@@ -763,6 +772,7 @@
 
 
 ;; find-leftmost-black-node-with-bh: tree positive-integer -> node
+;; INTERNAL
 ;; Finds the rightmost black node with the particular black height we're looking for.
 (define (find-leftmost-black-node-with-bh a-tree bh)
   (let loop ([n (tree-root a-tree)]
