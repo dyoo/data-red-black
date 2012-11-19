@@ -9,19 +9,20 @@
 ;; 
 ;; The usage case of this structure is to maintain an ordered sequence
 ;; of items.  Each item has an internal length.  We want to support
-;; quick lookup by position, as well as the catenation and splitting of sets.
+;; quick lookup by position, as well as the catenation and splitting
+;; of the sequence.
 ;;
-;; These operations are typical of an editor's buffer, which must maintain
-;; a sequence of tokens in order, allowing for arbitrary search, insert, and delete
-;; into the sequence.
-;;
+;; These operations are typical of an editor's buffer, which must
+;; maintain a sequence of tokens in order, allowing for arbitrary
+;; search, insert, and delete into the sequence.
 ;;
 ;; We follow the basic outline for order-statistic trees described in
-;; CLRS.  In our case, each node remembers the total width of the
+;; CLRS.  In our case, each node remembers the total width of its
 ;; subtree.  This allows us to perform search-by-position very
 ;; quickly.
 ;;
-;; We also incorporate elements of the design in:
+;; We incorporate some elements of the design in:
+;;
 ;;     Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
@@ -30,6 +31,7 @@
 ;; This module has test cases in a test submodule below.
 ;;
 ;; Use: 
+;;
 ;;     raco test red-black.rkt to execute these tests.
 ;;
 
@@ -66,7 +68,9 @@
          maximum
          successor
          predecessor
-         position)
+         position
+         
+         tree-items)
 
 
 ;; First, our data structures:
@@ -78,7 +82,7 @@
 (struct tree (root  ;; node     The root node of the tree.
               first ;; node     optimization: Points to the first element.
               last  ;; node     optimization: Points to the last element.
-              bh)   ;; natural  optimization: the black height of the entire tree.
+              bh)   ;; natural  optimization: The black height of the entire tree.
   #:mutable)
 
 
@@ -188,23 +192,23 @@
 ;; computed-node-subtree-width: node -> number
 ;; Assuming the node-subtree-width of the left and right are
 ;; correct, computes the subtree-width of n.
-;; Note: this does not trust the local cache in (node-subtree-width n).
+;;
+;; Note: this does not trust the local cache in (node-subtree-width
+;; n), but does trust node-subtree-width of the left and right
+;; subtrees.
 (define (computed-node-subtree-width a-node)
   (let* ([n a-node]
          [left (node-left n)]
          [right (node-right n)])
-    (+ (if (nil? left)
-           0 
-           (node-subtree-width left))
+    (+ (node-subtree-width left) 
        (node-self-width n)
-       (if (nil? right)
-           0 
-           (node-subtree-width right)))))
+       (node-subtree-width right))))
 
 
 
 ;; insert-first!: tree node -> void
 ;; Insert node x as the first element in the tree.
+;; x is assumed to be a singleton element.
 (define (insert-first! a-tree x)
   (set-node-color! x red)
   (cond
@@ -224,6 +228,7 @@
 
 ;; insert-last!: tree node -> void
 ;; Insert node x as the last element in the tree.
+;; x is assumed to be a singleton element.
 (define (insert-last! a-tree x)
   (set-node-color! x red)
   (cond
@@ -243,6 +248,7 @@
 ;; insert-before!: tree node node -> void
 ;; Insert node x before element 'before' of the tree.
 ;; x will be the immmediate predecessor of before upon completion.
+;; x is assumed to be a singleton element.
 (define (insert-before! a-tree before x)
   (cond
     [(nil? (node-left before))
@@ -769,16 +775,18 @@
        (loop (node-left node) current-height)])))
 
 
-;; split: tree node -> (values tree tree)
-;; Partitions the tree into two trees: the predecessors of x, and the successors of x.
+;; split!: tree node -> (values tree tree)
+;; Partitions the tree into two trees: the predecessors of x, and the
+;; successors of x.
 (define (split! a-tree x)
   (define x-child-bh (computed-black-height (node-left x)))
-  ;; The loop walks the ancestors of x, adding the left and right elements appropriately.
+  ;; The loop walks the ancestors of x, adding the left and right
+  ;; elements appropriately.
   (let loop ([ancestor (node-parent x)]
              [ancestor-child-bh (if (black? x) (add1 x-child-bh) x-child-bh)]
              [leftward? (eq? (node-right (node-parent x)) x)]
-             ;; initially, the left and right subtrees have the immediate predecessors
-             ;; and successors.
+             ;; initially, the left and right subtrees have the
+             ;; immediate predecessors and successors.
              [L (node->tree/bh (node-left x) x-child-bh)]
              [R (node->tree/bh (node-right x) x-child-bh)])
     (cond
@@ -792,14 +800,16 @@
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
         (cond
           [leftward?
-           (define subtree (node->tree/bh (node-left ancestor) ancestor-child-bh))
+           (define subtree (node->tree/bh (node-left ancestor) 
+                                          ancestor-child-bh))
            (loop new-ancestor
                  new-ancestor-child-bh
                  new-leftward?
                  (concat! subtree ancestor L)
                  R)]
           [else
-           (define subtree (node->tree/bh (node-right ancestor) ancestor-child-bh))
+           (define subtree (node->tree/bh (node-right ancestor) 
+                                          ancestor-child-bh))
            (loop new-ancestor
                  new-ancestor-child-bh
                  new-leftward?
@@ -827,6 +837,8 @@
 
 
 ;; computed-black-height: node -> natural
+;; INTERNAL: for use by split! only.
+;; Computes the black height of the tree rooted at x.
 (define (computed-black-height x)
   (let loop ([x x]
              [acc 0])
@@ -841,18 +853,19 @@
 
 
 
-
-(define (tree-items n)
-  (let loop ([node (tree-root n)]
+;; tree-items: tree -> (listof (list data natural))
+;; Returns the list of items in the tree.
+(define (tree-items t)
+  (let loop ([n (tree-root t)]
              [acc null])
     (cond
-      [(nil? node)
+      [(nil? n)
        acc]
       [else
-       (loop (node-left node)
-             (cons (list (node-data node)
-                         (node-self-width node))
-                   (loop (node-right node) acc)))])))
+       (loop (node-left n)
+             (cons (list (node-data n)
+                         (node-self-width n))
+                   (loop (node-right n) acc)))])))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -940,6 +953,12 @@
     
     ;; nil should always be black: algorithms depend on this!
     (check-eq? (node-color nil) black)
+    (check-eq? (node-subtree-width nil) 0)
+    (check-eq? (node-self-width nil) 0)
+    (check-eq? (node-parent nil) nil)
+    (check-eq? (node-left nil) nil)
+    (check-eq? (node-right nil) nil)
+
     
     ;; The internal linkage between all the nodes should be consistent,
     ;; and without cycles!
