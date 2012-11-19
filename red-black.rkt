@@ -16,16 +16,27 @@
 ;; maintain a sequence of tokens in order, allowing for arbitrary
 ;; search, insert, and delete into the sequence.
 ;;
+;;
+;;
 ;; We follow the basic outline for order-statistic trees described in
-;; CLRS.  In our case, each node remembers the total width of its
+;; CLRS.
+;;
+;;     Cormen, Leiserson, Rivest, Stein.  Introduction to Algorithms, 3rd edition.
+;;     http://mitpress.mit.edu/books/introduction-algorithms
+;;
+;; In our case, each node remembers the total width of its
 ;; subtree.  This allows us to perform search-by-position very
 ;; quickly.
 ;;
-;; We incorporate some elements of the design in:
+;; We also incorporate some elements of the design in:
 ;;
 ;;     Ron Wein.  Efficient implemenation of red-black trees with
 ;;     split and catenate operations.  (2005)
 ;;     http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875
+;;
+;; where we keep track of the first and last pointers.  My implementation of
+;; split is, in my opinion, easier to read, as we go bottom-up rather than
+;; top-down, without the weird need for two separate pivots.
 ;;
 ;;
 ;; This module has test cases in a test submodule below.
@@ -38,6 +49,8 @@
 
 (provide tree?
          tree-root
+         tree-first
+         tree-last
          node?
          nil?
          node-data
@@ -47,8 +60,11 @@
          node-left
          node-right
          node-color
+         red?
+         black?
          
          new-tree
+         new-node
          insert-first!
          insert-before!
          insert-after!
@@ -111,27 +127,14 @@
 ;; Is the node red?
 (define-syntax-rule (red? x) 
   (let ([v x])
-    (eq? (node-color v) red)
-    #;(and (not (eq? v nil))
-           (eq? (node-color v) red))))
+    (eq? (node-color v) red)))
 
 ;; black?: node -> boolean
 ;; Is the node black?
 (define-syntax-rule (black? x) 
   (let ([v x])
-    (eq? (node-color v) black)
-    #;(or (eq? v nil)
-          (eq? (node-color v) black))))
+    (eq? (node-color v) black)))
 
-
-
-;; This macro is to help me trace where mutations to nil are 
-;; taking place.
-(define-syntax-rule (set-node-p! p s)
-  (let ([v p])
-    (when (eq? v nil)
-       (error 'set-node-p! "Setting nil's parent"))
-    (set-node-parent! v s)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -143,6 +146,12 @@
 ;; Creates a fresh tree.
 (define (new-tree)
   (tree nil nil nil 0))
+
+
+;; new-node: -> node
+;; Creates a new singleton node.
+(define (new-node data width)
+  (node data width width nil nil nil red))
 
 
 ;; minimum: node -> node
@@ -200,6 +209,7 @@
 
 
 ;; update-node-subtree-width!: node -> void
+;; INTERNAL
 ;; Assuming the node-subtree-width of the left and right are
 ;; correct, computes the subtree-width of n and updates a-node.
 ;;
@@ -217,6 +227,22 @@
 
 
 
+;; update-subtree-width-up-to-root!: node -> void
+;; INTERNAL
+;; Updates the subtree width statistic from a-node upward to the root.
+;;
+;; * The subtree width field of a-node and its ancestors should be updated.
+(define (update-subtree-width-up-to-root! a-node)
+  (let loop ([n a-node])
+    (cond
+      [(nil? n)
+       (void)]
+      [else
+       (update-node-subtree-width! n)
+       (loop (node-parent n))])))
+
+
+
 ;; insert-first!: tree node -> void
 ;; Insert node x as the first element in the tree.
 ;; x is assumed to be a singleton element whose fields
@@ -231,7 +257,7 @@
     [else
      (define first (tree-first a-tree))
      (set-node-left! first x)
-     (set-node-p! x first)
+     (set-node-parent! x first)
      (set-tree-first! a-tree x)])
   (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
@@ -252,7 +278,7 @@
     [else
      (define last (tree-last a-tree))
      (set-node-right! last x)
-     (set-node-p! x last)
+     (set-node-parent! x last)
      (set-tree-last! a-tree x)])
   (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
@@ -267,11 +293,11 @@
   (cond
     [(nil? (node-left before))
      (set-node-left! before x)
-     (set-node-p! x before)]
+     (set-node-parent! x before)]
     [else    
      (define y (maximum (node-left before)))
      (set-node-right! y x)
-     (set-node-p! x y)])  
+     (set-node-parent! x y)])  
   (set-node-color! x red)
   (when (eq? before (tree-first a-tree))
     (set-tree-first! a-tree x))
@@ -288,11 +314,11 @@
   (cond
     [(nil? (node-right after))
      (set-node-right! after x)
-     (set-node-p! x after)]
+     (set-node-parent! x after)]
     [else    
      (define y (minimum (node-right after)))
      (set-node-left! y x)
-     (set-node-p! x y)])
+     (set-node-parent! x y)])
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
@@ -338,8 +364,8 @@
   (define y (node-right x))
   (set-node-right! x (node-left y))
   (unless (nil? (node-left y))
-    (set-node-p! (node-left y) x))
-  (set-node-p! y (node-parent x))
+    (set-node-parent! (node-left y) x))
+  (set-node-parent! y (node-parent x))
   (cond [(nil? (node-parent x))
          (set-tree-root! a-tree y)]
         [(eq? x (node-left (node-parent x)))
@@ -347,7 +373,7 @@
         [else
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
-  (set-node-p! x y)
+  (set-node-parent! x y)
   
   ;; Looking at Figure 1.32 of CLRS:
   ;; The change to the statistics can be locally computed after the
@@ -365,8 +391,8 @@
   (define x (node-left y))
   (set-node-left! y (node-right x))
   (unless (nil? (node-right x))
-    (set-node-p! (node-right x) y))
-  (set-node-p! x (node-parent y))
+    (set-node-parent! (node-right x) y))
+  (set-node-parent! x (node-parent y))
   (cond [(nil? (node-parent y))
          (set-tree-root! a-tree x)]
         [(eq? y (node-right (node-parent y)))
@@ -374,7 +400,7 @@
         [else
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
-  (set-node-p! y x)
+  (set-node-parent! y x)
   
   ;; Looking at Figure 1.32 of CLRS:
   ;; The change to the statistics can be locally computed after the
@@ -515,7 +541,7 @@
                           (let ([nil-parent
                                  (transplant-for-delete! a-tree y (node-right y))])
                             (set-node-right! y (node-right z))
-                            (set-node-p! (node-right y) y)
+                            (set-node-parent! (node-right y) y)
                             nil-parent)]))
                      
                      ;; y can't be nil here, so has no effect on nil-parent
@@ -525,7 +551,7 @@
                      
                      ;; Similarly, (node-left y) here can't be nil by the case
                      ;; analysis, so this has no effect on nil-parent.
-                     (set-node-p! (node-left y) y)
+                     (set-node-parent! (node-left y) y)
                      
                      (set-node-color! y (node-color z))
                      (update-subtree-width-up-to-root! 
@@ -657,22 +683,6 @@
            (set-node-color! x black)])))
 
 
-;; update-subtree-width-up-to-root!: node -> void
-;; INTERNAL
-;; Updates the subtree width statistic from a-node upward to the root.
-;;
-;; * The subtree width field of a-node and its ancestors should be updated.
-(define (update-subtree-width-up-to-root! a-node)
-  (let loop ([n a-node])
-    (cond
-      [(nil? n)
-       (void)]
-      [else
-       (update-node-subtree-width! n)
-       (loop (node-parent n))])))
-
-
-
 
 ;; search: tree natural -> (U node nil)
 ;; Search for the node closest to offset.
@@ -795,9 +805,9 @@
        (transplant-for-concat! t1 a x)
        (set-node-color! x red)
        (set-node-left! x a)
-       (set-node-p! a x)
+       (set-node-parent! a x)
        (set-node-right! x b)
-       (set-node-p! b x)
+       (set-node-parent! b x)
 
        ;; Possible TODO: Ron Wein recommends a lazy approach here,
        ;; rather than recompute the metadata eagerly.  I've tried so,
@@ -816,9 +826,9 @@
        (transplant-for-concat! t2 b x)
        (set-node-color! x red)
        (set-node-left! x a)
-       (set-node-p! a x)
+       (set-node-parent! a x)
        (set-node-right! x b)
-       (set-node-p! b x)
+       (set-node-parent! b x)
        (update-subtree-width-up-to-root! x)
        (fix-after-insert! t2 x)
        t2])]))
@@ -835,7 +845,7 @@
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (set-node-p! v u.p))
+  (set-node-parent! v u.p))
 
 
 
@@ -955,10 +965,10 @@
          (void)]
         [(eq? (node-right p) n)
          (set-node-right! p nil)
-         (set-node-p! n nil)]
+         (set-node-parent! n nil)]
         [else
          (set-node-left! p nil)
-         (set-node-p! n nil)]))
+         (set-node-parent! n nil)]))
 
 
 ;; node->tree/bh: node natural -> tree
@@ -967,14 +977,15 @@
 ;; already know the black height of the tree rooted at a-node.
 ;;
 ;; Note that the first and last of the tree have not been initialized
-;; here yet.
+;; here yet.  split! must eventually force the L and R trees to
+;; have valid first/last pointers, or else Bad Things happen.
 (define (node->tree/bh a-node bh)
   (cond
     [(nil? a-node)
      (new-tree)]
     [else
      (define new-bh (if (red? a-node) (add1 bh) bh))
-     (set-node-p! a-node nil)
+     (set-node-parent! a-node nil)
      (set-node-color! a-node black)
      (tree a-node
            nil
@@ -1261,7 +1272,7 @@
       (define y (node "y" 1 1 nil nil gamma nil))
       (set-tree-root! t y)
       (set-node-left! y x)
-      (set-node-p! x y)
+      (set-node-parent! x y)
       
       (right-rotate! t y)
       (check-eq? (tree-root t) x)
@@ -1905,7 +1916,7 @@
      "Working with a lot of words.  Insert and search tests, to make sure search works."
      (test-begin
       (define t (new-tree))
-      (printf "search test...\n")
+      (printf "exhaustive search test...\n")
       (for ([word (in-list (force all-words))])
         (insert-last/data! t word (string-length word)))
       
@@ -2270,9 +2281,10 @@
         (for ([w (in-list elts)])
           (insert-last/data! t w 1))
         (define-values (l r) 
-          (time-acc 
-           total-splitting-time
-           (split! t (search t n))))
+          (let ([pivot (search t n)])
+            (time-acc 
+             total-splitting-time
+             (split! t pivot))))
         (define-values (expected-l 1+expected-r) (split-at elts n))
         (check-equal? (map first (tree-items l)) expected-l)
         (check-equal? (map first (tree-items r)) (rest 1+expected-r)))
