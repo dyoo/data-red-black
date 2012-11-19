@@ -242,7 +242,7 @@
 
 
 
-;; insert-first!: tree node -> void
+;; insert-first!: tree (and/c (not nil?) node?) -> void
 ;; Insert node x as the first element in the tree.
 ;; x is assumed to be a singleton element whose fields
 ;; are valid.
@@ -263,7 +263,7 @@
 
 
 
-;; insert-last!: tree node -> void
+;; insert-last!: tree (and/c (not nil?) node?) -> void
 ;; Insert node x as the last element in the tree.
 ;; x is assumed to be a singleton element whose fields
 ;; are valid.
@@ -283,7 +283,7 @@
   (fix-after-insert! a-tree x))
 
 
-;; insert-before!: tree node node -> void
+;; insert-before!: tree node (and/c (not nil?) node?) -> void
 ;; Insert node x before element 'before' of the tree.
 ;; x will be the immmediate predecessor of before upon completion.
 ;; x is assumed to be a singleton element whose fields
@@ -304,7 +304,7 @@
   (fix-after-insert! a-tree x))
 
 
-;; insert-after!: tree node node -> void
+;; insert-after!: tree node (and/c (not nil?) node?) -> void
 ;; Insert node x after element 'after' of the tree.
 ;; x will be the immmediate successor of after upon completion.
 ;; x is assumed to be a singleton element whose fields
