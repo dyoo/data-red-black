@@ -1881,11 +1881,23 @@
         
         
         ;; Concatenation.  Drop our existing tree and throw it at the other.
-        (define/public (throw-at-monkey m2)
+        (define/public (throw-all-at-monkey m2)
           (send m2 catch-and-concat-at-front t known-model)
           (set! t (new-tree))
           (set! known-model '()))
-        
+
+        ;; Splitting/concatenation.  Split what we've got, keep the left,
+        ;; and throw the right to our friend m2.
+        (define/public (throw-some-at-monkey m2)
+          (when (not (empty? known-model))
+            (define k (random (length known-model)))
+            (define offset (kth-offset k))
+            (define node (search t offset))
+            (define-values (l r) (split! t node))
+            (set! t l)
+            (send m2 catch-and-concat-at-front r (drop known-model (add1 k)))
+            (set! known-model (take known-model k))))
+
         ;; private
         (define/public (catch-and-concat-at-front other-t other-known-model)
           (set! t (join! other-t t))
@@ -1955,8 +1967,9 @@
         (define m1 (new angry-monkey%))
         (define m2 (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
+          (displayln i)
           (define random-monkey (if (= 0 (random 2)) m1 m2))
-          (case (random 9)
+          (case (random 11)
             [(0 1 2)
              (send random-monkey insert-front!)
              (send random-monkey check-consistency!)]
@@ -1967,11 +1980,19 @@
              (send random-monkey delete-random!)
              (send random-monkey check-consistency!)]
             [(7)
-             (send m1 throw-at-monkey m2)
+             (send m1 throw-all-at-monkey m2)
              (send m1 check-consistency!)
              (send m2 check-consistency!)]
             [(8)
-             (send m2 throw-at-monkey m1)
+             (send m2 throw-all-at-monkey m1)
+             (send m1 check-consistency!)
+             (send m2 check-consistency!)]
+            [(9)
+             (send m1 throw-some-at-monkey m2)
+             (send m1 check-consistency!)
+             (send m2 check-consistency!)]
+            [(10)
+             (send m2 throw-some-at-monkey m1)
              (send m1 check-consistency!)
              (send m2 check-consistency!)])))
       (printf "done\n"))))
@@ -2038,19 +2059,21 @@
   
   (define all-tests
     (test-suite "all-tests" 
-                nil-tests 
-                rotation-tests
-                insertion-tests
-                deletion-tests
-                search-tests
-                position-tests
-                concat-tests
-                predecessor-successor-min-max-tests
-                split-tests
-                mixed-tests
-                angry-monkey-test-1 angry-monkey-test-2 angry-monkey-pair-test
-                dict-words-tests
-                exhaustive-structure-test))
+                ;nil-tests 
+                ;rotation-tests
+                ;insertion-tests
+                ;deletion-tests
+                ;search-tests
+                ;position-tests
+                #;concat-tests
+                #;predecessor-successor-min-max-tests
+                #;split-tests
+                #;mixed-tests
+                #;angry-monkey-test-1 
+                #;angry-monkey-test-2 
+                angry-monkey-pair-test
+                #;dict-words-tests
+                #;exhaustive-structure-test))
   (void
    (printf "Running test suite.\nWarning: this suite runs slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
