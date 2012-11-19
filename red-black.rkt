@@ -695,6 +695,7 @@
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
 (define (concat! t1 x t2)
+  (printf "concat\n")
   (cond
     [(nil? (tree-root t1))
      (set-node-left! x nil)
@@ -1967,7 +1968,6 @@
         (define m1 (new angry-monkey%))
         (define m2 (new angry-monkey%))
         (for ([i (in-range number-of-operations)])
-          (displayln i)
           (define random-monkey (if (= 0 (random 2)) m1 m2))
           (case (random 11)
             [(0 1 2)
