@@ -189,21 +189,6 @@
               y]))]))
 
 
-;; update-node-subtree-width!: node -> void
-;; Assuming the node-subtree-width of the left and right are
-;; correct, computes the subtree-width of n and updates a-node.
-;;
-;; Note: this does not trust the local cache in (node-subtree-width
-;; n), but does trust node-subtree-width of the left and right
-;; subtrees.
-(define (update-node-subtree-width! a-node)
-  (let* ([n a-node]
-         [left (node-left n)]
-         [right (node-right n)])
-    (set-node-subtree-width! a-node
-                             (+ (node-subtree-width left) 
-                                (node-self-width n)
-                                (node-subtree-width right)))))
 
 
 
@@ -601,6 +586,27 @@
            (set-node-color! x black)])))
 
 
+;; update-node-subtree-width!: node -> void
+;; Assuming the node-subtree-width of the left and right are
+;; correct, computes the subtree-width of n and updates a-node.
+;;
+;; Note: this does not trust the local cache in (node-subtree-width
+;; n), but does trust node-subtree-width of the left and right
+;; subtrees.
+(define (update-node-subtree-width! a-node)
+  (let* ([n a-node]
+         [left (node-left n)]
+         [right (node-right n)]
+         [left-width (node-subtree-width left)]
+         [right-width (node-subtree-width right)])
+    (set-node-subtree-width! a-node
+                             (if (and left-width right-width)
+                                 (+ (node-subtree-width left) 
+                                    (node-self-width n)
+                                    (node-subtree-width right))
+                                 #f))))
+
+
 ;; update-subtree-width-up-to-root!: tree node natural? -> void
 ;; INTERNAL
 ;; Updates the subtree width statistic from a-node upward to the root.
@@ -614,6 +620,34 @@
       [else
        (update-node-subtree-width! n)
        (loop (node-parent n))])))
+
+
+(define (invalidate-subtree-width-up-to-root! a-tree a-node)
+  (let loop ([n a-node])
+    (cond
+      [(nil? n)
+       (void)]
+      [else
+       (unless (eq? #f (node-subtree-width n))
+         (set-node-subtree-width! n #f)
+         (loop (node-parent n)))])))
+
+
+(define (force-subtree-width-down-to-leaves! a-tree)
+  (let loop ([n (tree-root a-tree)])
+    (cond
+      [(nil? n)
+       (void)]
+      [else
+       (define left (node-left n))
+       (define right (node-right n))
+       (when (eq? #f (node-subtree-width left))
+         (loop left))
+       (when (eq? #f (node-subtree-width right))
+         (loop right))
+       (update-node-subtree-width! n)])))
+         
+
 
 
 
@@ -688,7 +722,9 @@
      (delete! t2 x)
      ;; Next, delegate to the more general concat! function, using
      ;; x as the pivot.
-     (concat! t1 x t2)]))
+     (define concat-tree (concat! t1 x t2))
+     (force-subtree-width-down-to-leaves! concat-tree)
+     concat-tree]))
 
 
 ;; concat!: tree node tree -> tree
@@ -740,11 +776,9 @@
        (set-node-right! x b)
        (set-node-parent! b x)
 
-       ;; Possible TODO: Ron Wein recommends a lazy approach here,
-       ;; rather than recompute the metadata eagerly.  I haven't done
-       ;; so yet, as I have to measure whether or not it actually
-       ;; helps.
-       (update-subtree-width-up-to-root! t1 x)
+       ;; Ron Wein recommends a lazy approach here, rather than
+       ;; recompute the metadata eagerly.
+       (invalidate-subtree-width-up-to-root! t1 x)
 
        (fix-after-insert! t1 x)
        t1]
@@ -760,7 +794,7 @@
        (set-node-parent! a x)
        (set-node-right! x b)
        (set-node-parent! b x)
-       (update-subtree-width-up-to-root! t2 x)
+       (invalidate-subtree-width-up-to-root! t2 x)
        (fix-after-insert! t2 x)
        t2])]))
 
@@ -822,6 +856,8 @@
        (force-tree-last! L)
        (force-tree-first! R)
        (force-tree-last! R)
+       (force-subtree-width-down-to-leaves! L)
+       (force-subtree-width-down-to-leaves! R)
        (values L R)]
       [else
        (define new-ancestor (node-parent ancestor))
