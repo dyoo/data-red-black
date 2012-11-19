@@ -695,8 +695,6 @@
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
 (define (concat! t1 x t2)
-  (define t1-bh (tree-bh t1))
-  (define t2-bh (tree-bh t2))
   (cond
     [(nil? (tree-root t1))
      (set-node-left! x nil)
@@ -712,33 +710,37 @@
      (insert-last! t1 x)
      t1]
     
-    [(>= t1-bh t2-bh)     
-     (set-tree-last! t1 (tree-last t2))
-     (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
-     (define b (tree-root t2))
-     (transplant! t1 a x)
-     (set-node-color! x red)
-     (set-node-left! x a)
-     (set-node-parent! a x)
-     (set-node-right! x b)
-     (set-node-parent! b x)
-     (update-subtree-width-up-to-root! t1 x)
-     (fix-after-insert! t1 x)
-     t1]
-    
     [else
-     (set-tree-first! t2 (tree-first t1))
-     (define a (tree-root t1))
-     (define b (find-leftmost-black-node-with-bh t2 t1-bh))
-     (transplant! t2 b x)
-     (set-node-color! x red)
-     (set-node-left! x a)
-     (set-node-parent! a x)
-     (set-node-right! x b)
-     (set-node-parent! b x)
-     (update-subtree-width-up-to-root! t2 x)
-     (fix-after-insert! t2 x)
-     t2]))
+     (define t1-bh (tree-bh t1))
+     (define t2-bh (tree-bh t2))
+     (cond
+      [(>= t1-bh t2-bh)     
+       (set-tree-last! t1 (tree-last t2))
+       (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
+       (define b (tree-root t2))
+       (transplant! t1 a x)
+       (set-node-color! x red)
+       (set-node-left! x a)
+       (set-node-parent! a x)
+       (set-node-right! x b)
+       (set-node-parent! b x)
+       (update-subtree-width-up-to-root! t1 x)
+       (fix-after-insert! t1 x)
+       t1]
+      
+      [else
+       (set-tree-first! t2 (tree-first t1))
+       (define a (tree-root t1))
+       (define b (find-leftmost-black-node-with-bh t2 t1-bh))
+       (transplant! t2 b x)
+       (set-node-color! x red)
+       (set-node-left! x a)
+       (set-node-parent! a x)
+       (set-node-right! x b)
+       (set-node-parent! b x)
+       (update-subtree-width-up-to-root! t2 x)
+       (fix-after-insert! t2 x)
+       t2])]))
 
 
 
@@ -760,16 +762,16 @@
 ;; find-leftmost-black-node-with-bh: tree positive-integer -> node
 ;; Finds the rightmost black node with the particular black height we're looking for.
 (define (find-leftmost-black-node-with-bh a-tree bh)
-  (let loop ([node (tree-root a-tree)]
+  (let loop ([n (tree-root a-tree)]
              [current-height (tree-bh a-tree)])
     (cond
-      [(black? node)
+      [(black? n)
        (cond [(= bh current-height)
-              node]
+              n]
              [else
-              (loop (node-left node) (sub1 current-height))])]
+              (loop (node-left n) (sub1 current-height))])]
       [else
-       (loop (node-left node) current-height)])))
+       (loop (node-left n) current-height)])))
 
 
 ;; split!: tree node -> (values tree tree)
@@ -850,7 +852,7 @@
 
 
 
-;; tree-items: tree -> (listof (list data natural))
+;; tree-items: tree -> (listof (list X natural))
 ;; Returns the list of items in the tree.
 (define (tree-items t)
   (let loop ([n (tree-root t)]
