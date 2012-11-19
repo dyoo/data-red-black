@@ -123,6 +123,16 @@
     #;(or (eq? v nil)
           (eq? (node-color v) black))))
 
+
+
+;; This macro is to help me trace where mutations to nil are 
+;; taking place.
+(define-syntax-rule (set-node-p! p s)
+  (let ([v p])
+    #;(when (eq? v nil)
+        (error 'set-node-p! "Setting nil's parent"))
+    (set-node-parent! v s)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
@@ -221,7 +231,7 @@
     [else
      (define first (tree-first a-tree))
      (set-node-left! first x)
-     (set-node-parent! x first)
+     (set-node-p! x first)
      (set-tree-first! a-tree x)])
   (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
@@ -242,7 +252,7 @@
     [else
      (define last (tree-last a-tree))
      (set-node-right! last x)
-     (set-node-parent! x last)
+     (set-node-p! x last)
      (set-tree-last! a-tree x)])
   (update-subtree-width-up-to-root! (node-parent x))
   (fix-after-insert! a-tree x))
@@ -257,11 +267,11 @@
   (cond
     [(nil? (node-left before))
      (set-node-left! before x)
-     (set-node-parent! x before)]
+     (set-node-p! x before)]
     [else    
      (define y (maximum (node-left before)))
      (set-node-right! y x)
-     (set-node-parent! x y)])  
+     (set-node-p! x y)])  
   (set-node-color! x red)
   (when (eq? before (tree-first a-tree))
     (set-tree-first! a-tree x))
@@ -278,11 +288,11 @@
   (cond
     [(nil? (node-right after))
      (set-node-right! after x)
-     (set-node-parent! x after)]
+     (set-node-p! x after)]
     [else    
      (define y (minimum (node-right after)))
      (set-node-left! y x)
-     (set-node-parent! x y)])
+     (set-node-p! x y)])
   (set-node-color! x red)
   (when (eq? after (tree-last a-tree))
     (set-tree-last! a-tree x))
@@ -328,8 +338,8 @@
   (define y (node-right x))
   (set-node-right! x (node-left y))
   (unless (nil? (node-left y))
-    (set-node-parent! (node-left y) x))
-  (set-node-parent! y (node-parent x))
+    (set-node-p! (node-left y) x))
+  (set-node-p! y (node-parent x))
   (cond [(nil? (node-parent x))
          (set-tree-root! a-tree y)]
         [(eq? x (node-left (node-parent x)))
@@ -337,7 +347,7 @@
         [else
          (set-node-right! (node-parent x) y)])
   (set-node-left! y x)
-  (set-node-parent! x y)
+  (set-node-p! x y)
   
   ;; Looking at Figure 1.32 of CLRS:
   ;; The change to the statistics can be locally computed after the
@@ -355,8 +365,8 @@
   (define x (node-left y))
   (set-node-left! y (node-right x))
   (unless (nil? (node-right x))
-    (set-node-parent! (node-right x) y))
-  (set-node-parent! x (node-parent y))
+    (set-node-p! (node-right x) y))
+  (set-node-p! x (node-parent y))
   (cond [(nil? (node-parent y))
          (set-tree-root! a-tree x)]
         [(eq? y (node-right (node-parent y)))
@@ -364,7 +374,7 @@
         [else
          (set-node-left! (node-parent y) x)])
   (set-node-right! x y)
-  (set-node-parent! y x)
+  (set-node-p! y x)
   
   ;; Looking at Figure 1.32 of CLRS:
   ;; The change to the statistics can be locally computed after the
@@ -483,15 +493,15 @@
                         ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
                         ;; Be aware that x here can be nil, in which case we've now
                         ;; changed the contents of nil.
-                        (set-node-parent! x y)]
+                        (set-node-p! x y)]
                        [else
                         (transplant! a-tree y (node-right y))
                         (set-node-right! y (node-right z))
-                        (set-node-parent! (node-right y) y)])
+                        (set-node-p! (node-right y) y)])
                      
                      (transplant! a-tree z y)
                      (set-node-left! y (node-left z))
-                     (set-node-parent! (node-left y) y)
+                     (set-node-p! (node-left y) y)
                      (set-node-color! y (node-color z))
                      (update-subtree-width-up-to-root! (node-parent x))
                      (values x y-original-color))])])
@@ -501,7 +511,7 @@
            (void)])
     ;; After all this is done, just force nil's parent to be itself again
     ;; (just in case it got munged during delete)
-    (set-node-parent! nil nil)))
+    (set-node-p! nil nil)))
 
 
 
@@ -518,7 +528,7 @@
          (set-node-left! u.p v)]
         [else
          (set-node-right! u.p v)])
-  (set-node-parent! v u.p))
+  (set-node-p! v u.p))
 
 
 ;; fix-after-delete!: tree node -> void
@@ -739,9 +749,9 @@
        (transplant! t1 a x)
        (set-node-color! x red)
        (set-node-left! x a)
-       (set-node-parent! a x)
+       (set-node-p! a x)
        (set-node-right! x b)
-       (set-node-parent! b x)
+       (set-node-p! b x)
 
        ;; Possible TODO: Ron Wein recommends a lazy approach here,
        ;; rather than recompute the metadata eagerly.  I've tried so,
@@ -760,9 +770,9 @@
        (transplant! t2 b x)
        (set-node-color! x red)
        (set-node-left! x a)
-       (set-node-parent! a x)
+       (set-node-p! a x)
        (set-node-right! x b)
-       (set-node-parent! b x)
+       (set-node-p! b x)
        (update-subtree-width-up-to-root! x)
        (fix-after-insert! t2 x)
        t2])]))
@@ -885,10 +895,10 @@
          (void)]
         [(eq? (node-right p) n)
          (set-node-right! p nil)
-         (set-node-parent! n nil)]
+         (set-node-p! n nil)]
         [else
          (set-node-left! p nil)
-         (set-node-parent! n nil)]))
+         (set-node-p! n nil)]))
 
 
 ;; node->tree/bh: node natural -> tree
@@ -904,7 +914,7 @@
      (new-tree)]
     [else
      (define new-bh (if (red? a-node) (add1 bh) bh))
-     (set-node-parent! a-node nil)
+     (set-node-p! a-node nil)
      (set-node-color! a-node black)
      (tree a-node
            nil
@@ -1193,7 +1203,7 @@
       (define y (node "y" 1 1 nil nil gamma nil))
       (set-tree-root! t y)
       (set-node-left! y x)
-      (set-node-parent! x y)
+      (set-node-p! x y)
       
       (right-rotate! t y)
       (check-eq? (tree-root t) x)
