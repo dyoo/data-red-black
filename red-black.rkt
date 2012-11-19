@@ -74,7 +74,6 @@
          insert-after/data!
          
          delete!
-         concat!
          join!
          split!
  
@@ -329,28 +328,28 @@
 ;; insert-first/data!: tree data width -> void
 ;; Insert before the first element of the tree.
 (define (insert-first/data! a-tree data width)
-  (define x (node data width width nil nil nil red))
+  (define x (new-node data width))
   (insert-first! a-tree x))
 
 
 ;; insert-last/data!: tree data width -> void
 ;; Insert after the last element in the tree.
 (define (insert-last/data! a-tree data width)
-  (define x (node data width width nil nil nil red))
+  (define x (new-node data width))
   (insert-last! a-tree x))
 
 
 ;; insert-before/data!: tree data width -> void
 ;; Insert before the first element of the tree.
 (define (insert-before/data! a-tree n data width)
-  (define x (node data width width nil nil nil red))
+  (define x (new-node data width))
   (insert-before! a-tree n x))
 
 
 ;; insert-after/data!: tree node data width -> void
 ;; Insert after the last element in the tree.
 (define (insert-after/data! a-tree n data width)
-  (define x (node data width width nil nil nil red))
+  (define x (new-node data width))
   (insert-after! a-tree n x))
 
 
