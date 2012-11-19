@@ -1063,27 +1063,33 @@
         [(nil? node)
          (void)]
         [(red? node)
-         (when (or (red? (node-left node))
-                   (red? (node-right node)))
-           (error 'check-rb-structure "rb violation: two reds are adjacent"))
+         (check-false (or (red? (node-left node))
+                          (red? (node-right node)))
+                      "rb violation: two reds are adjacent")
          (loop (node-left node))
          (loop (node-right node))]))
     
     
     ;; The maximum and minimum should be correctly linked
     ;; as tree-last and tree-first, respectively:
-    (unless (eq? (tree-first a-tree)
-                 (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
-      (error 'check-rb-structure "in ~a, minimum (~a) is not first (~a)" 
-             (tree->list a-tree)
-             (node-data (if (nil? (tree-root a-tree)) nil (minimum (tree-root a-tree))))
-             (node-data (tree-first a-tree))))
-    (unless (eq? (tree-last a-tree)
-                 (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree))))
-      (error 'check-rb-structure "in ~a, maximum (~a) is not last (~a)"
-             (tree->list a-tree)
-             (node-data (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree))))
-             (node-data (tree-last a-tree))))
+    (check-eq? (tree-first a-tree)
+               (if (nil? (tree-root a-tree))
+                   nil 
+                   (minimum (tree-root a-tree)))
+               (format "in ~a, minimum (~a) is not first (~a)" 
+                       (tree->list a-tree)
+                       (node-data (if (nil? (tree-root a-tree)) 
+                                      nil 
+                                      (minimum (tree-root a-tree))))
+                       (node-data (tree-first a-tree))))
+    (check-eq? (tree-last a-tree)
+               (if (nil? (tree-root a-tree)) nil (maximum (tree-root a-tree)))
+               (format "in ~a, maximum (~a) is not last (~a)"
+                       (tree->list a-tree)
+                       (node-data (if (nil? (tree-root a-tree))
+                                      nil 
+                                      (maximum (tree-root a-tree))))
+                       (node-data (tree-last a-tree))))
     
     
     ;; The left and right sides should be black-balanced, for all subtrees.
@@ -1092,33 +1098,30 @@
         [(nil? node)
          (void)]
         [else
-         (unless (= (node-count-black (node-left node))
-                    (node-count-black (node-right node)))
-           (displayln (tree->list a-tree))
-           (error 'check-rb-structure "rb violation: not black-balanced"))
+         (check-equal? (node-count-black (node-left node))
+                       (node-count-black (node-right node))
+                       "rb violation: not black-balanced")
          (loop (node-left node))
          (loop (node-right node))]))
     (define observed-black-height (node-count-black (tree-root a-tree)))
     ;; The observed black height should equal that of the recorded one
-    (unless (= (tree-bh a-tree) observed-black-height)
-      (error 'check-rb-structure
-             (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
-                     observed-black-height 
-                     (tree-bh a-tree)
-                     (tree->list a-tree))))
-    
+    (check-equal? (tree-bh a-tree) 
+                  observed-black-height
+                  (format "rb violation: observed height ~a is not equal to recorded height ~a: ~s"
+                          observed-black-height 
+                          (tree-bh a-tree)
+                          (tree->list a-tree)))
     
     
     ;; The overall height must be less than 2 lg(n+1)
     (define count (tree-node-count a-tree))
     (define observed-height (tree-height a-tree))
     (define (lg n) (/ (log n) (log 2)))
-    (when (> observed-height (* 2 (lg (add1 count))))
-      (error 'check-rb-structure 
-             (format "rb violation: height ~a beyond 2 lg(~a)=~a" 
-                     observed-height (add1 count)
-                     (* 2 (log (add1 count))))))
-    
+    (check-false (> observed-height (* 2 (lg (add1 count))))
+                 (format "rb violation: height ~a beyond 2 lg(~a)=~a" 
+                         observed-height (add1 count)
+                         (* 2 (log (add1 count)))))
+  
     
     ;; The subtree widths should be consistent:
     (let loop ([n (tree-root a-tree)])
@@ -1128,12 +1131,15 @@
         [else
          (define left-subtree-size (loop (node-left n)))
          (define right-subtree-size (loop (node-right n)))
-         (unless (= (node-subtree-width n)
-                    (+ left-subtree-size right-subtree-size (node-self-width n)))
-           (error 'check-rb-structure "stale subtree width: expected ~a, but observe ~a"
-                  (+ left-subtree-size right-subtree-size (node-self-width n))
-                  (node-subtree-width n)))
-         (+ left-subtree-size right-subtree-size (node-self-width n))])))
+         (check-equal? (node-subtree-width n)
+                       (+ left-subtree-size right-subtree-size
+                          (node-self-width n))
+                       (format "stale subtree width: expected ~a, but observe ~a"
+                               (+ left-subtree-size right-subtree-size
+                                  (node-self-width n))
+                               (node-subtree-width n)))
+         (+ left-subtree-size right-subtree-size 
+            (node-self-width n))])))
   
   
   
@@ -2076,6 +2082,43 @@
              (send m1 check-consistency!)
              (send m2 check-consistency!)])))
       (printf "done\n"))))
+
+
+  (define angry-monkey-pair-test-parallel
+    (test-suite
+     "Simulation of a pair of angry monkeys bashing at the tree.
+      They should not see each other."
+     (test-begin
+      (printf "monkey tests parallel...\n")
+      (define number-of-operations 100)
+      (define number-of-iterations 100)
+      (define threads
+        (for/list ([i (in-range 4)])
+          (thread (lambda ()
+                    (for ([i (in-range number-of-iterations)])
+                      (define m (new angry-monkey%))
+                      (for ([i (in-range number-of-operations)])
+                        (case (random 11)
+                          [(0)
+                           (send m insert-front!)
+                           (send m check-consistency!)]
+                          [(1)
+                           (send m insert-back!)
+                           (send m check-consistency!)]
+                          [(2)
+                           (send m delete-random!)
+                           (send m check-consistency!)]
+                          [(3)
+                           (send m insert-after/random!)
+                           (send m check-consistency!)]
+                          [(4)
+                           (send m insert-before/random!)
+                           (send m check-consistency!)])))))))
+      (for ([t (in-list threads)])
+        (thread-wait t))
+      (printf "done\n"))))
+  
+
   
   
   
@@ -2178,8 +2221,10 @@
                 angry-monkey-test-1 
                 angry-monkey-test-2 
                 angry-monkey-pair-test
+                angry-monkey-pair-test-parallel
                 dict-words-tests
-                exhaustive-structure-test))
+                exhaustive-structure-test
+                ))
   (void
    (printf "Running test suite.\nWarning: this suite can run very slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
