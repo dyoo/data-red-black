@@ -129,8 +129,8 @@
 ;; taking place.
 (define-syntax-rule (set-node-p! p s)
   (let ([v p])
-    #;(when (eq? v nil)
-        (error 'set-node-p! "Setting nil's parent"))
+    (when (eq? v nil)
+       (error 'set-node-p! "Setting nil's parent"))
     (set-node-parent! v s)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -462,7 +462,7 @@
                   [(nil? (node-left z))
                    (define z.p (node-parent z))
                    (define x (node-right z))
-                   (transplant! a-tree z x)
+                   (transplant-for-delete! a-tree z x)
                    ;; At this point, we need to repair the statistic where
                    ;; where the replacement happened, since z's been replaced with x.
                    ;; The x subtree is ok, so we need to begin the statistic repair
@@ -475,7 +475,7 @@
                   [(nil? (node-right z))
                    (define z.p (node-parent z))
                    (define x (node-left z))
-                   (transplant! a-tree z x)
+                   (transplant-for-delete! a-tree z x)
                    (when (not (nil? z.p))
                      (update-subtree-width-up-to-root! z.p))
                    (values x y-original-color)]
@@ -493,13 +493,14 @@
                         ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
                         ;; Be aware that x here can be nil, in which case we've now
                         ;; changed the contents of nil.
-                        (set-node-p! x y)]
+                        (set-node-parent! x y)  ;; FIXME: nil potentially mutated here
+                        ]
                        [else
-                        (transplant! a-tree y (node-right y))
+                        (transplant-for-delete! a-tree y (node-right y))
                         (set-node-right! y (node-right z))
                         (set-node-p! (node-right y) y)])
                      
-                     (transplant! a-tree z y)
+                     (transplant-for-delete! a-tree z y)
                      (set-node-left! y (node-left z))
                      (set-node-p! (node-left y) y)
                      (set-node-color! y (node-color z))
@@ -511,16 +512,18 @@
            (void)])
     ;; After all this is done, just force nil's parent to be itself again
     ;; (just in case it got munged during delete)
-    (set-node-p! nil nil)))
+    (set-node-parent! nil nil) ;;; FIXME: nil mutated here
+    
+    ))
 
 
 
 
-;; transplant: tree node (U node nil) -> void
+;; transplant-for-delete: tree node (U node nil) -> void
 ;; INTERNAL
 ;; Replaces the instance of node u in a-tree with v.
 ;; Note: if v is nil, this sets nil's parent pointer too.
-(define (transplant! a-tree u v)
+(define (transplant-for-delete! a-tree u v)
   (define u.p (node-parent u))
   (cond [(nil? u.p)
          (set-tree-root! a-tree v)]
@@ -529,6 +532,19 @@
         [else
          (set-node-right! u.p v)])
   (set-node-p! v u.p))
+
+
+(define (transplant-for-concat! a-tree u v)
+  (define u.p (node-parent u))
+  (cond [(nil? u.p)
+         (set-tree-root! a-tree v)]
+        [(eq? u (node-left u.p))
+         (set-node-left! u.p v)]
+        [else
+         (set-node-right! u.p v)])
+  (set-node-p! v u.p))
+
+
 
 
 ;; fix-after-delete!: tree node -> void
@@ -746,7 +762,7 @@
 
        (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
        (define b (tree-root t2))
-       (transplant! t1 a x)
+       (transplant-for-concat! t1 a x)
        (set-node-color! x red)
        (set-node-left! x a)
        (set-node-p! a x)
@@ -767,7 +783,7 @@
        (set-tree-first! t2 (tree-first t1))
        (define a (tree-root t1))
        (define b (find-leftmost-black-node-with-bh t2 t1-bh))
-       (transplant! t2 b x)
+       (transplant-for-concat! t2 b x)
        (set-node-color! x red)
        (set-node-left! x a)
        (set-node-p! a x)
@@ -1026,8 +1042,9 @@
          (define left-count  (loop (node-left a-node) 
                                    (+ (if (black? a-node) 1 0)
                                       acc)))
-         (unless (= right-count left-count)
-           (error 'node-count-black "~a vs ~a" right-count left-count))
+         (check-equal? right-count 
+                       left-count
+                       (format "node-count-black: ~a vs ~a" right-count left-count))
          right-count])))
   
   
