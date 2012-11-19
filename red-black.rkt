@@ -786,7 +786,7 @@
   ;; elements appropriately.
   (let loop ([ancestor (node-parent x)]
              [ancestor-child-bh (if (black? x) (add1 x-child-bh) x-child-bh)]
-             [leftward? (eq? (node-right (node-parent x)) x)]
+             [coming-from-the-right? (eq? (node-right (node-parent x)) x)]
              ;; initially, the left and right subtrees have the
              ;; immediate predecessors and successors.
              [L (node->tree/bh (node-left x) x-child-bh)]
@@ -799,16 +799,16 @@
        (define new-ancestor-child-bh (if (black? ancestor) 
                                          (add1 ancestor-child-bh)
                                          ancestor-child-bh))
-       (define new-leftward? (eq? (node-right new-ancestor) ancestor))
-       ;; Make sure ancestor is detached.
+       (define new-coming-from-the-right? (eq? (node-right new-ancestor) ancestor))
+       ;; Important!  Make sure ancestor is detached.
        (detach! ancestor)
        (cond
-        [leftward?
+        [coming-from-the-right?
          (define subtree (node->tree/bh (node-left ancestor) 
                                         ancestor-child-bh))
          (loop new-ancestor
                new-ancestor-child-bh
-               new-leftward?
+               new-coming-from-the-right?
                (concat! subtree ancestor L)
                R)]
         [else
@@ -816,7 +816,7 @@
                                         ancestor-child-bh))
          (loop new-ancestor
                new-ancestor-child-bh
-               new-leftward?
+               new-coming-from-the-right?
                L
                (concat! R ancestor subtree))])])))
 
