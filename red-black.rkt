@@ -1761,10 +1761,13 @@
       (check-rb-structure! t)
       
       (printf "searching\n")
+      (define search-time-1 0)
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
-        (check-equal? (node-data (search t offset)) word)
+        (check-equal? (node-data
+                       (time-acc search-time-1 (search t offset)))
+                      word)
         (+ offset (string-length word)))
-      (printf "done\n"))
+      (printf "done; total search time: ~a\n" search-time-1))
      
      
      ;; Do it backwards
@@ -1774,11 +1777,14 @@
         (insert-first/data! t word (string-length word)))
       (printf "checking structure\n")
       (check-rb-structure! t)
+      (define search-time-2 0)
       (printf "searching\n")
       (for/fold ([offset 0]) ([word (in-list (force all-words))])
-        (check-equal? (node-data (search t offset)) word)
+        (check-equal? (node-data 
+                       (time-acc search-time-2 (search t offset)))
+                      word)
         (+ offset (string-length word)))
-      (printf "done\n")
+      (printf "done; total search time: ~a\n" search-time-2)
       (void))))
   
   
