@@ -1240,6 +1240,7 @@
   (define nil-tests
     (test-suite
      "check properties of nil"
+     (printf "nil tests...\n")
      (test-case
       "nil tree should be consistent"
       (define t (new-tree))
@@ -1248,6 +1249,7 @@
   (define rotation-tests
     (test-suite 
      "Checking left and right rotation" 
+     (printf "rotation tests...\n")
      (test-begin
       (define t (new-tree))
       
@@ -1280,7 +1282,7 @@
   (define insertion-tests
     (test-suite
      "Insertion tests"
-     
+     (printf "insertion tests...\n")
      (test-case "small beginnings"
                 (define t (new-tree))
                 (insert-last/data! t "small world" 11)
@@ -1360,6 +1362,7 @@
   (define deletion-tests
     (test-suite
      "deletion-tests"
+     (printf "deletion tests...\n")
      (test-case
       "Deleting the last node in a tree should set us back to the nil case"
       (define t (new-tree))
@@ -1430,6 +1433,7 @@
   (define mixed-tests
     (test-suite
      "other miscellaneous tests"
+     (printf "mixed tests...\n")
      (test-case 
       "Another sequence identified by the random monkey"
       ;inserting "A" to front
@@ -1487,6 +1491,7 @@
   (define search-tests
     (test-suite 
      "search-tests"
+     (printf "search tests...\n")
      (test-begin
       (define t (new-tree))
       (check-equal? (search t 0) nil)
@@ -1564,7 +1569,7 @@
   (define position-tests
     (test-suite
      "position tests"
-     
+     (printf "position tests...\n")
      (test-case
       "empty case"
       (check-equal? (position nil) -1))
@@ -1608,6 +1613,7 @@
   (define concat-tests
     (test-suite
      "concat tests"
+     (printf "concat tests...\n")
      (test-case 
       "empty case"
       (define t1 (new-tree))
@@ -1727,7 +1733,7 @@
   (define split-tests
     (test-suite
      "splitting"
-     
+     (printf "split tests...\n")
      (test-case
       "(a) ---split-a--> () ()"
       (define t (new-tree))
@@ -1859,6 +1865,7 @@
   (define predecessor-successor-min-max-tests
     (test-suite
      "predecesssor, successor, maximum, minimum tests"
+     (printf "navigation tests\n")
      (test-case
       "simple predecessor and successor tests"
       (define known-model '("this" "is" "yet" "another" "test" "that" "makes" "sure" "we" "can" "walk"
@@ -2123,8 +2130,7 @@
             [(10)
              (send m2 throw-some-at-monkey m1)
              (send m1 check-consistency!)
-             (send m2 check-consistency!)])))
-      (printf "done\n"))))
+             (send m2 check-consistency!)]))))))
 
 
   (define angry-monkey-pair-test-parallel
@@ -2160,8 +2166,7 @@
                            (send m insert-before/random!)
                            (send m check-consistency!)])))))))
       (for ([t (in-list threads)])
-        (thread-wait t))
-      (printf "done\n"))))
+        (thread-wait t)))))
   
 
   
@@ -2170,6 +2175,7 @@
   (define exhaustive-structure-test
     (test-suite
      "Check intermediate results for tree structure"
+     (printf "exhaustive structure test...\n")
      (test-begin
       (printf "Timing construction of /usr/share/dict/words:\n")
       (define t (new-tree))
@@ -2249,7 +2255,7 @@
   
   (define exhaustive-split-test
     (test-suite
-     "exhaustive split test"
+     "exhaustive split test..."
      ;; Another exhaustive test.  Among N elements, split everywhere,
      ;; and make sure we get the expected values on the left and right.
      ;; Also print out how long it takes to do the actual splitting.
@@ -2286,6 +2292,7 @@
                 predecessor-successor-min-max-tests
                 split-tests
                 mixed-tests
+
                 ;; The following tests are a bit more expensive.  Wait a while.
                 angry-monkey-test-1 
                 angry-monkey-test-2 
