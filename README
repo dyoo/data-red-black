@@ -1,8 +1,11 @@
 Notes.
 
-This is not thread safe yet.  In particular, the use of mutation with nil
-in delete is definitely not thread-safe.  I really do need to modify
-the code so each tree has its own concept of nil.
+
+This is a re-implementation of a token-tree data structure such as the
+one used in DrRacket's syntax-color/token-tree library.  The structure
+represents a sequence of tokens, each with their own width.  It allows
+for dynamic insertion, deletion, splitting, and concatenation, as well
+as search-by-position.
 
 
 ----------------------------------------------------------------------
