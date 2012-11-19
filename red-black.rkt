@@ -189,20 +189,21 @@
               y]))]))
 
 
-;; computed-node-subtree-width: node -> number
+;; update-node-subtree-width!: node -> void
 ;; Assuming the node-subtree-width of the left and right are
-;; correct, computes the subtree-width of n.
+;; correct, computes the subtree-width of n and updates a-node.
 ;;
 ;; Note: this does not trust the local cache in (node-subtree-width
 ;; n), but does trust node-subtree-width of the left and right
 ;; subtrees.
-(define (computed-node-subtree-width a-node)
+(define (update-node-subtree-width! a-node)
   (let* ([n a-node]
          [left (node-left n)]
          [right (node-right n)])
-    (+ (node-subtree-width left) 
-       (node-self-width n)
-       (node-subtree-width right))))
+    (set-node-subtree-width! a-node
+                             (+ (node-subtree-width left) 
+                                (node-self-width n)
+                                (node-subtree-width right)))))
 
 
 
@@ -342,7 +343,7 @@
   ;; The change to the statistics can be locally computed after the
   ;; rotation:
   (set-node-subtree-width! y (node-subtree-width x))
-  (set-node-subtree-width! x (computed-node-subtree-width x)))
+  (update-node-subtree-width! x))
 
 
 ;; right-rotate!: tree node natural -> void
@@ -369,7 +370,7 @@
   ;; The change to the statistics can be locally computed after the
   ;; rotation:
   (set-node-subtree-width! x (node-subtree-width y))
-  (set-node-subtree-width! y (computed-node-subtree-width y)))
+  (update-node-subtree-width! y))
 
 
 ;; fix-after-insert!: tree node natural -> void
@@ -611,7 +612,7 @@
       [(nil? n)
        (void)]
       [else
-       (set-node-subtree-width! n (computed-node-subtree-width n))
+       (update-node-subtree-width! n)
        (loop (node-parent n))])))
 
 
