@@ -915,6 +915,7 @@
            racket/list
            racket/class
            racket/promise
+           (only-in "original-token-tree.rkt" insert-last-spec! token-tree%)
            "test-data/all-words.rkt")
   
   
@@ -2055,7 +2056,10 @@
              (check-rb-structure! t))
          (insert-last/data! t word (string-length word))))
 
-
+      (collect-garbage)
+      (collect-garbage)
+      (collect-garbage)
+  
       ;; We might be curious as to the overhead of the tree structure.
       ;; (of course, it's worth it because we are dealing with a dynamic set here.)
       ;; Still, let's compare with inserting into a native hash:
@@ -2065,6 +2069,18 @@
           (for/fold ([acc 0]) ([word (in-list (force all-words))])
             (hash-set! ht acc word)
             (+ acc (string-length word)))))
+
+      (collect-garbage)
+      (collect-garbage)
+      (collect-garbage)
+      ;; And vs the original token-tree implementation:
+
+      (printf "just for comparison: inserting in the original token tree:\n")
+      (let ([t (new token-tree%)])
+        (time
+          (for ([word (in-list (force all-words))])
+            (insert-last-spec! t (string-length word) word))))
+
 
       (collect-garbage)
       (collect-garbage)
