@@ -443,6 +443,16 @@
 
 ;; delete!: tree node -> void
 ;; Removes the node from the tree.
+;; Follows the description of CLRS, but with a few extensions:
+;;
+;;    * Importantly, we do not ever mutate the sentinel nil node's parent.
+;;      This means we takes special care of remembering what it should be,
+;;      so that the deletion fixup can properly walk the tree.
+;;      We do this so that we can preserve thread-safety: the nil node is global,
+;;      so mutating it is a Bad Thing.
+;;
+;;    * Does the statistic update, following the strategy of augmented
+;;      red-black trees.
 (define (delete! a-tree z)
   
   ;; First, adjust tree-first and tree-last if we end up
@@ -492,10 +502,11 @@
                        (cond
                          [(eq? (node-parent y) z)
                           ;; In CLRS, this is steps 12 and 13 of RB-DELETE.
-                          ;; Be aware that x here can be nil, in which case we've now
-                          ;; changed the contents of nil.
+                          ;; Be aware that x here can be nil.  Rather than
+                          ;; change the contents of nil, we record that value
+                          ;; in nil-parent and pass that along to the rest of
+                          ;; the computation.
                           (cond [(nil? x)
-                                 #;(set-node-parent! x y)
                                  y]
                                 [else
                                  (set-node-parent! x y)
@@ -507,24 +518,25 @@
                             (set-node-p! (node-right y) y)
                             nil-parent)]))
                      
-                     ;; y can't be nil here, so we don't need to record this.
+                     ;; y can't be nil here, so has no effect on nil-parent
                      (transplant-for-delete! a-tree z y)
+                     
                      (set-node-left! y (node-left z))
+                     
+                     ;; Similarly, (node-left y) here can't be nil by the case
+                     ;; analysis, so this has no effect on nil-parent.
                      (set-node-p! (node-left y) y)
+                     
                      (set-node-color! y (node-color z))
                      (update-subtree-width-up-to-root! 
                       (if (nil? x) nil-parent (node-parent x)))
                      (values x y-original-color nil-parent))])])
-    
-    #;(when (not (eq? (node-parent nil) nil-parent))
-        (error 'fix-after-delete! "delete!: you screwed up somewhere!"))
-
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x nil-parent)]
           [else
-           (void)])
+           (void)])))
     
-    (set-node-parent! nil nil)))
+   
 
 
 
@@ -546,7 +558,6 @@
         [else
          (set-node-right! u.p v)])
   (cond [(nil? v)
-         #;(set-node-parent! v u.p)
          u.p]
         [else
          (set-node-parent! v u.p)
@@ -563,25 +574,21 @@
 ;; * unbalanced black paths
 ;; * red-red links
 ;; 
+;; Note that this function has been augmented so that it keeps special
+;; track of nil-parent.
 (define (fix-after-delete! a-tree x nil-parent)
+
+  ;; n-p: node -> node
+  ;; Should be almost exactly like node-parent, except for one
+  ;; special case: in the context of this function alone, 
+  ;; if we're navigating the parent of nil, use the nil-parent constant.
   (define (n-p x)
     (if (nil? x)
         nil-parent
         (node-parent x)))
 
-  (define (check-nil!)
-    (when (not (eq? (node-parent nil) nil-parent))
-      (error 'fix-after-delete! "fix-after-delete!: you screwed up somewhere!")))
-
-
-  (set-node-parent! nil nil-parent)
-
-  (check-nil!)
-  
   (let loop ([x x]
              [early-escape? #f])
-    
-    (check-nil!)
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (black? x))
            (cond
