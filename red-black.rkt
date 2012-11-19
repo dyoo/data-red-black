@@ -607,10 +607,11 @@
   ;; Should be almost exactly like node-parent, except for one
   ;; special case: in the context of this function alone, 
   ;; if we're navigating the parent of nil, use the nil-parent constant.
-  (define (n-p x)
-    (if (nil? x)
-        nil-parent
-        (node-parent x)))
+  (define-syntax-rule (n-p x)
+    (let ([v x])
+      (if (nil? v)
+          nil-parent
+          (node-parent v))))
 
   (let loop ([x x]
              [early-escape? #f])
