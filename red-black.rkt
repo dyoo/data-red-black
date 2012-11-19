@@ -501,10 +501,12 @@
                                  (set-node-parent! x y)
                                  nil])]
                          [else
-                          (transplant-for-delete! a-tree y (node-right y))
-                          (set-node-right! y (node-right z))
-                          (set-node-p! (node-right y) y)
-                          nil]))
+                          (let ([nil-parent
+                                 (transplant-for-delete! a-tree y (node-right y))])
+                            (set-node-right! y (node-right z))
+                            (set-node-p! (node-right y) y)
+                            
+                            #;(node-parent nil) nil-parent)]))
                      
                      ;; y can't be nil here, so we don't need to record this.
                      (transplant-for-delete! a-tree z y)
