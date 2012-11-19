@@ -694,8 +694,10 @@
 ;; Joins t1, x and t2 together, using x as the pivot.
 ;; x will be treated as if it were a singleton tree; its x.left and x.right
 ;; will be overwritten during concatenation.
+;;
+;; Note: x must NOT be attached to the tree t1 or t2, or else this will
+;; introduce an illegal cycle.
 (define (concat! t1 x t2)
-  (printf "concat\n")
   (cond
     [(nil? (tree-root t1))
      (set-node-left! x nil)
@@ -798,24 +800,39 @@
                                          (add1 ancestor-child-bh)
                                          ancestor-child-bh))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
-        (cond
-          [leftward?
-           (define subtree (node->tree/bh (node-left ancestor) 
-                                          ancestor-child-bh))
-           (loop new-ancestor
-                 new-ancestor-child-bh
-                 new-leftward?
-                 (concat! subtree ancestor L)
-                 R)]
-          [else
-           (define subtree (node->tree/bh (node-right ancestor) 
-                                          ancestor-child-bh))
-           (loop new-ancestor
-                 new-ancestor-child-bh
-                 new-leftward?
-                 L
-                 (concat! R ancestor subtree))])])))
+       ;; Make sure ancestor is detached.
+       (detach! ancestor)
+       (cond
+        [leftward?
+         (define subtree (node->tree/bh (node-left ancestor) 
+                                        ancestor-child-bh))
+         (loop new-ancestor
+               new-ancestor-child-bh
+               new-leftward?
+               (concat! subtree ancestor L)
+               R)]
+        [else
+         (define subtree (node->tree/bh (node-right ancestor) 
+                                        ancestor-child-bh))
+         (loop new-ancestor
+               new-ancestor-child-bh
+               new-leftward?
+               L
+               (concat! R ancestor subtree))])])))
 
+;; detach!: node -> void
+;; INTERNAL
+;; Disconnects n from its parent.
+(define (detach! n)
+  (define p (node-parent n))
+  (cond [(nil? p)
+         (void)]
+        [(eq? (node-right p) n)
+         (set-node-right! p nil)
+         (set-node-parent! n nil)]
+        [else
+         (set-node-left! p nil)
+         (set-node-parent! n nil)]))
 
 
 ;; node->tree/bh: node natural -> tree
@@ -2059,21 +2076,21 @@
   
   (define all-tests
     (test-suite "all-tests" 
-                ;nil-tests 
-                ;rotation-tests
-                ;insertion-tests
-                ;deletion-tests
-                ;search-tests
-                ;position-tests
-                #;concat-tests
-                #;predecessor-successor-min-max-tests
-                #;split-tests
-                #;mixed-tests
-                #;angry-monkey-test-1 
-                #;angry-monkey-test-2 
+                nil-tests 
+                rotation-tests
+                insertion-tests
+                deletion-tests
+                search-tests
+                position-tests
+                concat-tests
+                predecessor-successor-min-max-tests
+                split-tests
+                mixed-tests
+                angry-monkey-test-1 
+                angry-monkey-test-2 
                 angry-monkey-pair-test
-                #;dict-words-tests
-                #;exhaustive-structure-test))
+                dict-words-tests
+                exhaustive-structure-test))
   (void
-   (printf "Running test suite.\nWarning: this suite runs slowly under DrRacket when debugging is on.\n")
+   (printf "Running test suite.\nWarning: this suite can run very slowly under DrRacket when debugging is on.\n")
    (run-tests all-tests)))
