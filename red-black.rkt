@@ -505,8 +505,7 @@
                                  (transplant-for-delete! a-tree y (node-right y))])
                             (set-node-right! y (node-right z))
                             (set-node-p! (node-right y) y)
-                            
-                            #;(node-parent nil) nil-parent)]))
+                            nil-parent)]))
                      
                      ;; y can't be nil here, so we don't need to record this.
                      (transplant-for-delete! a-tree z y)
@@ -515,6 +514,10 @@
                      (set-node-color! y (node-color z))
                      (update-subtree-width-up-to-root! (node-parent x))
                      (values x y-original-color nil-parent))])])
+    
+    (when (not (eq? (node-parent nil) nil-parent))
+      (error 'fix-after-delete! "delete!: you screwed up somewhere!"))
+
     (cond [(eq? black y-original-color)
            (fix-after-delete! a-tree x nil-parent)]
           [else
@@ -560,14 +563,21 @@
 ;; * red-red links
 ;; 
 (define (fix-after-delete! a-tree x nil-parent)
-  (when (and (nil? x) (not (eq? (node-parent x) nil-parent)))
-    (error 'fix-after-delete! "you screwed up somewhere!"))
   (define (n-p x)
     (if (nil? x)
         nil-parent
         (node-parent x)))
+
+  (define (check-nil!)
+    (when (not (eq? (node-parent nil) nil-parent))
+      (error 'fix-after-delete! "fix-after-delete!: you screwed up somewhere!")))
+
+  (check-nil!)
+  
   (let loop ([x x]
              [early-escape? #f])
+    
+    (check-nil!)
     (cond [(and (not (eq? x (tree-root a-tree)))
                 (black? x))
            (cond
