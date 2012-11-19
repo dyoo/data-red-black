@@ -601,7 +601,7 @@
            (set-node-color! x black)])))
 
 
-;; update-subtree-width-up-to-root!: tree node natural? -> void
+;; update-subtree-width-up-to-root!: node -> void
 ;; INTERNAL
 ;; Updates the subtree width statistic from a-node upward to the root.
 ;;
@@ -712,6 +712,7 @@
      (set-node-right! x nil)
      (set-node-subtree-width! x (node-self-width x))
      ;; if t2 is lazy about having a tree-first, force it.
+     ;; This only happens in the context of split!
      (force-tree-first! t2)
      (insert-first! t2 x)
      t2]
@@ -730,7 +731,9 @@
      (define t2-bh (tree-bh t2))
      (cond
       [(>= t1-bh t2-bh)     
+       ;; Note: even if tree-last is invalid, nothing gets hurt here.
        (set-tree-last! t1 (tree-last t2))
+
        (define a (find-rightmost-black-node-with-bh t1 t2-bh)) 
        (define b (tree-root t2))
        (transplant! t1 a x)
@@ -741,11 +744,11 @@
        (set-node-parent! b x)
 
        ;; Possible TODO: Ron Wein recommends a lazy approach here,
-       ;; rather than recompute the metadata eagerly.  I haven't done
-       ;; so yet, as I have to measure whether or not it actually
-       ;; helps.
+       ;; rather than recompute the metadata eagerly.  I've tried so,
+       ;; but in my experiments, the overhead of testing and forcing
+       ;; actually hurts us.  So I do not try to compute subtree-width
+       ;; lazily.
        (update-subtree-width-up-to-root! x)
-
        (fix-after-insert! t1 x)
        t1]
       
@@ -818,6 +821,8 @@
              [R (node->tree/bh (node-right x) x-child-bh)])
     (cond
       [(nil? ancestor)
+       ;; Now that we have our L and R, fix up their last and first
+       ;; pointers, then return.
        (force-tree-first! L)
        (force-tree-last! L)
        (force-tree-first! R)
