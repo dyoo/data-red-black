@@ -772,51 +772,58 @@
 ;; split: tree node -> (values tree tree)
 ;; Partitions the tree into two trees: the predecessors of x, and the successors of x.
 (define (split! a-tree x)
+  (define x-child-bh (computed-black-height (node-left x)))
   ;; The loop walks the ancestors of x, adding the left and right elements appropriately.
   (let loop ([ancestor (node-parent x)]
-             [leftward? (eq? (node-right (node-parent x))
-                             x)]
+             [ancestor-child-bh (if (black? x) (add1 x-child-bh) x-child-bh)]
+             [leftward? (eq? (node-right (node-parent x)) x)]
              ;; initially, the left and right subtrees have the immediate predecessors
              ;; and successors.
-             [L (node->tree/bh (node-left x))]
-             [R (node->tree/bh (node-right x))])
+             [L (node->tree/bh (node-left x) x-child-bh)]
+             [R (node->tree/bh (node-right x) x-child-bh)])
     (cond
       [(nil? ancestor)
        (values L R)]
       [else
        (define new-ancestor (node-parent ancestor))
+       (define new-ancestor-child-bh (if (black? ancestor) 
+                                         (add1 ancestor-child-bh)
+                                         ancestor-child-bh))
        (define new-leftward? (eq? (node-right new-ancestor) ancestor))
         (cond
           [leftward?
-           (define subtree (node->tree/bh (node-left ancestor)))
-           (loop new-ancestor 
+           (define subtree (node->tree/bh (node-left ancestor) ancestor-child-bh))
+           (loop new-ancestor
+                 new-ancestor-child-bh
                  new-leftward?
                  (concat! subtree ancestor L)
                  R)]
           [else
-           (define subtree (node->tree/bh (node-right ancestor)))
+           (define subtree (node->tree/bh (node-right ancestor) ancestor-child-bh))
            (loop new-ancestor
+                 new-ancestor-child-bh
                  new-leftward?
                  L
                  (concat! R ancestor subtree))])])))
 
 
 
-;; node->tree/bh: node -> tree
+;; node->tree/bh: node natural -> tree
+;; INTERNAL: for use by split! only.
 ;; Create a node out of a tree, where we should already know the black
-;; height.
-(define (node->tree/bh a-node)
+;; height of the tree rooted at a-node.
+(define (node->tree/bh a-node bh)
   (cond
     [(nil? a-node)
      (new-tree)]
     [else
+     (define new-bh (if (red? a-node) (add1 bh) bh))
      (set-node-parent! a-node nil)
      (set-node-color! a-node black)
-     (let ([tree-bh (computed-black-height a-node)])
-       (tree a-node
-             (minimum a-node)
-             (maximum a-node)
-             tree-bh))]))
+     (tree a-node
+           (minimum a-node)
+           (maximum a-node)
+           new-bh)]))
 
 
 ;; computed-black-height: node -> natural
