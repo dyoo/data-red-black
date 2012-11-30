@@ -341,6 +341,8 @@
     (cond
       [(nil? n)
        (void)]
+      [(eq? (node-subtree-width n) invalid-width)
+       (void)]
       [else
        (invalidate-node-subtree-width! n)
        (loop (node-parent n))])))
