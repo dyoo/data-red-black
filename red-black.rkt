@@ -651,7 +651,7 @@
                    (set-node-left! z nil)
                    (set-node-right! z nil)
                    (set-node-color! z red)
-                   (set-node-subtree-width! z (node-self-width z))
+                   (update-node-subtree-width! z)
 
                    (values x y-original-color nil-parent)]
                   
@@ -666,7 +666,7 @@
                    (set-node-left! z nil)
                    (set-node-right! z nil)
                    (set-node-color! z red)
-                   (set-node-subtree-width! z (node-self-width z))
+                   (update-node-subtree-width! z)
                    (values x y-original-color nil-parent)]
                   
                   ;; The hardest case is when z has non-nil left and right.
@@ -715,7 +715,7 @@
                      (set-node-left! z nil)
                      (set-node-right! z nil)
                      (set-node-color! z red)
-                     (set-node-subtree-width! z (node-self-width z)) 
+                     (update-node-subtree-width! z)
 
                      (values x y-original-color nil-parent))])])
     (cond [(eq? black y-original-color)
@@ -978,7 +978,7 @@
     [(nil? (tree-root t1))
      (set-node-left! x nil)
      (set-node-right! x nil)
-     (set-node-subtree-width! x (node-self-width x))
+     (update-node-subtree-width! x)
      ;; if t2 is lazy about having a tree-first, force it.
      ;; This only happens in the context of split!
      (force-tree-first! t2)
@@ -989,7 +989,7 @@
      ;; symmetric with the case above:
      (set-node-left! x nil)
      (set-node-right! x nil)
-     (set-node-subtree-width! x (node-self-width x))
+     (update-node-subtree-width! x)
      (force-tree-last! t1)
      (insert-last! t1 x)
      t1]
@@ -1106,7 +1106,7 @@
   (set-node-right! x nil)
   (set-node-left! x nil)
   (set-node-color! x red)
-  (set-node-subtree-width! x (node-self-width x))
+  (update-node-subtree-width! x)
 
   ;; Clear out a-tree so it's unusable.
   (reset! a-tree)
