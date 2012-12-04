@@ -1,18 +1,18 @@
 #lang scribble/doc
 @(require scribble/manual
           scribble/eval
-          (for-label syntax-color/private/red-black
+          (for-label data/red-black/positional
                      racket/base
                      racket/string))
 
 @(define my-eval (make-base-eval))
-@(my-eval '(require syntax-color/private/red-black racket/string))
+@(my-eval '(require data/red-black/positional racket/string))
 
-@title{Ordered Red-Black Trees}
+@title{Positional Red-Black Trees}
 @author+email["Danny Yoo" "dyoo@hashcollision.org"]
 
 
-@defmodule[syntax-color/private/red-black]
+@defmodule[data/red-black/positional]
 
 This is an implementation of an augmented red-black tree with extra information
 to support position-based queries.
@@ -61,7 +61,7 @@ distinguished @racket[nil] node lies at the leaves of the tree.
 
 
 @section{API}
-@declare-exporting[syntax-color/private/red-black]
+@declare-exporting[data/red-black/positional]
 
 
 @subsection{Data types}
@@ -773,7 +773,7 @@ expensive for certain applications.
 
 The uncontracted bindings of this library can be accessed through:
 
-@racketblock[(require (submod syntax-color/private/red-black uncontracted))]
+@racketblock[(require (submod data/red-black/positional uncontracted))]
 
 This provides the same bindings as the regular API, but with no contract
 checks.  Use this with extreme care: Improper use of the uncontracted form of

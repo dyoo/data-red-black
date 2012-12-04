@@ -1,18 +1,18 @@
 #lang scribble/doc
 @(require scribble/manual
           scribble/eval
-          (for-label syntax-color/private/augmented-red-black
+          (for-label data/red-black/augmented
                      racket/base
                      racket/string))
 
 @(define my-eval (make-base-eval))
-@(my-eval '(require syntax-color/private/augmented-red-black racket/string))
+@(my-eval '(require data/red-black/augmented racket/string))
 
 @title{Augmented Red-Black Trees}
 @author+email["Danny Yoo" "dyoo@hashcollision.org"]
 
 
-@defmodule[syntax-color/private/augmented-red-black]
+@defmodule[data/red-black/augmented]
 
 This is an implementation of an augmented red-black tree that extends the nodes
 of a basic red-black tree with attached metadata at every node.  The metadata
@@ -115,7 +115,7 @@ of the tree.
 
 
 @section{API}
-@declare-exporting[syntax-color/private/augmented-red-black]
+@declare-exporting[data/red-black/augmented]
 
 
 @subsection{Data types}
