@@ -11,7 +11,7 @@
 ;;     empty trees.
 
 ;; For speed, we use the uncontracted forms in red-black.rkt.
-(require (prefix-in rb: (submod "red-black.rkt" uncontracted))
+(require (prefix-in rb: (submod "positional.rkt" uncontracted))
          racket/class)
 
 
