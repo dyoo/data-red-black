@@ -775,7 +775,7 @@ expensive for certain applications.
 
 The uncontracted bindings of this library can be accessed through:
 
-@racketblock[(require (submod syntax-color/private/red-black uncontracted))]
+@racketblock[(require (submod data/red-black/augmented uncontracted))]
 
 This provides the same bindings as the regular API, but with no contract
 checks.  Use this with extreme care: Improper use of the uncontracted form of
