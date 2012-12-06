@@ -151,7 +151,9 @@
 (module* test racket/base
   (require rackunit
            rackunit/text-ui
+           racket/list
            (submod ".."))
+         
   
   (define tests
     (test-suite
@@ -223,6 +225,75 @@
        (ordered-set-add! s "hello")
        (ordered-set-add! s "world")
        (ordered-set-add! s "testing")
-       (check-equal? (ordered-set->list s) '("hello" "testing" "world")))))
+       (check-equal? (ordered-set->list s) '("hello" "testing" "world")))
+
+     (test-case
+      "us states"
+      (define the-states-and-territories
+        '("Alabama"
+          "Alaska"
+          "American Samoa"
+          "Arizona"
+          "Arkansas"
+          "California"
+          "Colorado"
+          "Connecticut"
+          "Delaware"
+          "District of Columbia"
+          "Florida"
+          "Georgia"
+          "Guam"
+          "Hawaii"
+          "Idaho"
+          "Illinois"
+          "Indiana"
+          "Iowa"
+          "Kansas"
+          "Kentucky"
+          "Louisiana"
+          "Maine"
+          "Maryland"
+          "Massachusetts"
+          "Michigan"
+          "Minnesota"
+          "Mississippi"
+          "Missouri"
+          "Montana"
+          "Nebraska"
+          "Nevada"
+          "New Hampshire"
+          "New Jersey"
+          "New Mexico"
+          "New York"
+          "North Carolina"
+          "North Dakota"
+          "Northern Marianas Islands"
+          "Ohio"
+          "Oklahoma"
+          "Oregon"
+          "Pennsylvania"
+          "Puerto Rico"
+          "Rhode Island"
+          "South Carolina"
+          "South Dakota"
+          "Tennessee"
+          "Texas"
+          "Utah"
+          "Vermont"
+          "Virgin Islands"
+          "Virginia"
+          "Washington"
+          "West Virginia"
+          "Wisconsin"
+          "Wyoming"))
+      ;; Randomly insert all the elements, make sure we still get the
+      ;; right list.
+      (for ([iteration (in-range 1000)])
+        (define s (new-ordered-set))
+        (for ([x (shuffle the-states-and-territories)])
+          (ordered-set-add! s x))
+        (check-equal? (ordered-set->list s)
+                      the-states-and-territories)))))
+      
   
   (run-tests tests))
