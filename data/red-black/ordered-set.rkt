@@ -16,6 +16,7 @@
   [ordered-set? (any/c . -> . boolean?)]
   [new-ordered-set [() (#:order (any/c any/c . -> . ordering/c)) . ->* . ordered-set?]]
   [ordered-set-empty? (ordered-set? . -> . boolean?)]
+  [ordered-set-count (ordered-set? . -> . natural-number/c)]
   [ordered-set-member? (ordered-set? any/c . -> . boolean?)]
   [ordered-set-add! (ordered-set? any/c . -> . any)]
   [ordered-set-remove! (ordered-set? any/c . -> . any)]
@@ -40,14 +41,31 @@
         #f)))))
      
 
+
+
+
 ;; new-ordered-set: [#:order order] -> ordered-set
+;; Creates a new ordered set.
+;;
+;; INTERNAL: each node remembers how many elements its subtree contains.
 (define (new-ordered-set #:order [order datum-order])
-  (ordered-set (new-tree) order))
+  (ordered-set (new-tree #:metadata-f metadata-count-f) order))
 
 
 ;; ordered-set-empty?: ordered-set -> boolean
+;; Returns true if the set is empty.
 (define (ordered-set-empty? s)
   (nil-node? (tree-root (ordered-set-tree s))))
+
+
+;; ordered-set-count: ordered-set -> natural-number
+;; Returns the number of elements in the set.
+(define (ordered-set-count s)
+  (define the-root (tree-root (ordered-set-tree s)))
+  (cond [(nil-node? the-root)
+         0]
+        [else
+         (node-metadata the-root)]))
 
 
 ;; ordered-set-member?: ordered-set X -> boolean
@@ -91,6 +109,13 @@
             (delete! the-tree n)])]))
     
 
+;; ordered-set->list: ordered-set -> list
+;; Returns a list of the ordered set items.
+(define (ordered-set->list s)
+  (tree-items (ordered-set-tree s)))
+
+
+
 ;; search: tree order X -> (values node node)
 ;; INTERNAL
 ;; Looks for the element in the set, using the order.  Returns
@@ -110,12 +135,15 @@
           (values n p)]
          [(>)
           (loop (node-right n) n)])])))
-         
-  
-;; ordered-set->list: ordered-set -> list
-;; Returns a list of the ordered set items.
-(define (ordered-set->list s)
-  (tree-items (ordered-set-tree s)))
+
+
+;; metadata-count-f: X node node -> natural-number/c
+;; INTERNAL
+;; Each node maintains a count of the elements in the subtree.
+(define (metadata-count-f x left-node right-node)
+  (+ 1
+     (or (node-metadata left-node) 0)
+     (or (node-metadata right-node) 0)))
 
 
 
@@ -131,13 +159,15 @@
      
      (test-case 
       "empty is empty"
-      (check-true (ordered-set-empty? (new-ordered-set))))
+      (check-true (ordered-set-empty? (new-ordered-set)))
+      (check-equal? (ordered-set-count (new-ordered-set)) 0))
      
      (test-case
       "non-empty is not empty"
       (define s (new-ordered-set))
       (ordered-set-add! s "hello")
       (check-false (ordered-set-empty? s))
+      (check-equal? (ordered-set-count s) 1)
       (check-true (ordered-set-member? s "hello"))
       (check-false (ordered-set-member? s "Hello")))
      
@@ -155,6 +185,7 @@
       (check-true (ordered-set-member? s "zelda"))
       (ordered-set-remove! s "zelda")
       (check-true (ordered-set-empty? s))
+      (check-equal? (ordered-set-count s) 0)
       (check-false (ordered-set-member? s "zelda")))
      
      (test-case
@@ -174,7 +205,8 @@
       (define s (new-ordered-set))
       (ordered-set-add! s "hello")
       (ordered-set-add! s "world")
-      (check-false (ordered-set-empty? s)))
+      (check-false (ordered-set-empty? s))
+      (check-equal? (ordered-set-count s) 2))
      
      
      (test-case
