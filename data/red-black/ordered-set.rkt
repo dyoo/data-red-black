@@ -137,28 +137,37 @@
       "non-empty is not empty"
       (define s (new-ordered-set))
       (ordered-set-add! s "hello")
-      (check-false (ordered-set-empty? s)))
+      (check-false (ordered-set-empty? s))
+      (check-true (ordered-set-member? s "hello"))
+      (check-false (ordered-set-member? s "Hello")))
      
      (test-case
       "delete on empty"
       (define s (new-ordered-set))
       (ordered-set-remove! s "not there")
-      (check-true (ordered-set-empty? s)))
+      (check-true (ordered-set-empty? s))
+      (check-false (ordered-set-member? s "not there")))
      
      (test-case
       "add and remove"
       (define s (new-ordered-set))
       (ordered-set-add! s "zelda")
+      (check-true (ordered-set-member? s "zelda"))
       (ordered-set-remove! s "zelda")
-      (check-true (ordered-set-empty? s)))
+      (check-true (ordered-set-empty? s))
+      (check-false (ordered-set-member? s "zelda")))
      
      (test-case
       "add 2 and remove 1"
       (define s (new-ordered-set))
       (ordered-set-add! s "zelda")
       (ordered-set-add! s "link")
+      (check-true (ordered-set-member? s "zelda"))
+      (check-true (ordered-set-member? s "link"))
       (ordered-set-remove! s "zelda")
-      (check-false (ordered-set-empty? s)))
+      (check-false (ordered-set-empty? s))
+      (check-false (ordered-set-member? s "zelda"))
+      (check-true (ordered-set-member? s "link")))
      
      (test-case
       "add two"
