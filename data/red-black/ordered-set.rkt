@@ -118,8 +118,12 @@
   (tree-items (ordered-set-tree s)))
 
 
-(module+ test
-  (require rackunit rackunit/text-ui)
+
+;; External tests:
+(module* test racket/base
+  (require rackunit
+           rackunit/text-ui
+           (submod ".."))
   
   (define tests
     (test-suite
