@@ -19,7 +19,7 @@
   [ordered-set-member? (ordered-set? any/c . -> . boolean?)]
   [ordered-set-add! (ordered-set? any/c . -> . any)]
   [ordered-set-remove! (ordered-set? any/c . -> . any)]
-  [ordered-set->list (ordered-set? . -> . list/c)]))
+  [ordered-set->list (ordered-set? . -> . list?)]))
 
 
 (struct ordered-set
