@@ -59,7 +59,7 @@
 
 
 ;; ordered-set-count: ordered-set -> natural-number
-;; Returns the number of elements in the set.
+;; Returns the number of elements in the ordered set.
 (define (ordered-set-count s)
   (define the-root (tree-root (ordered-set-tree s)))
   (cond [(nil-node? the-root)
@@ -69,12 +69,14 @@
 
 
 ;; ordered-set-member?: ordered-set X -> boolean
+;; Returns true if x is a member of the ordered set.
 (define (ordered-set-member? s x)
   (define-values (n p) (search (ordered-set-tree s) (ordered-set-order s) x))
   (not (nil-node? n)))
 
 
 ;; ordered-set-add!: ordered-set X -> void
+;; Adds x to the ordered set.  If x is already in there, this is a no-op.
 (define (ordered-set-add! s x)
   (define the-tree (ordered-set-tree s))
   (cond [(nil-node? (tree-root the-tree))
@@ -94,7 +96,7 @@
 
 
 ;; ordered-set-remove!: ordered-set X -> void
-;; Removes x from the ordered set.
+;; Removes x from the ordered set.  If x is not a member, this is a no-op.
 (define (ordered-set-remove! s x)
   (define the-tree (ordered-set-tree s))
   (cond [(nil-node? (tree-root the-tree))
@@ -229,6 +231,11 @@
 
      (test-case
       "us states"
+      ;; http://www.ilru.org/html/publications/directory/state_list.html
+      ;;
+      ;; Note: at the time of this writing, the web page was incorrect
+      ;; about being in alphabetical order: they listed "Virgin
+      ;; Islands" after "Virginia".
       (define the-states-and-territories
         '("Alabama"
           "Alaska"
