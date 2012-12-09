@@ -6,7 +6,7 @@
 ;; We'll want to provide many of the operations of:
 ;; http://docs.racket-lang.org/reference/sets.html
 
-(require data/red-black/augmented
+(require (submod data/red-black/augmented uncontracted)
          data/order
          racket/contract)
 
@@ -14,13 +14,18 @@
 (provide
  (contract-out
   [ordered-set? (any/c . -> . boolean?)]
-  [new-ordered-set [() (#:order (any/c any/c . -> . ordering/c)) . ->* . ordered-set?]]
-  [ordered-set-empty? (ordered-set? . -> . boolean?)]
-  [ordered-set-count (ordered-set? . -> . natural-number/c)]
-  [ordered-set-member? (ordered-set? any/c . -> . boolean?)]
-  [ordered-set-add! (ordered-set? any/c . -> . any)]
-  [ordered-set-remove! (ordered-set? any/c . -> . any)]
-  [ordered-set->list (ordered-set? . -> . list?)]))
+  [ordered-set-order (ordered-set/c . -> . (any/c any/c . -> . ordering/c))]
+  [ordered-set/c flat-contract?]
+  [new-ordered-set [() 
+                    (#:order (any/c any/c . -> . ordering/c))
+                    . ->* . 
+                    ordered-set/c]]
+  [ordered-set-empty? (ordered-set/c . -> . boolean?)]
+  [ordered-set-count (ordered-set/c . -> . natural-number/c)]
+  [ordered-set-member? (ordered-set/c any/c . -> . boolean?)]
+  [ordered-set-add! (ordered-set/c any/c . -> . any)]
+  [ordered-set-remove! (ordered-set/c any/c . -> . any)]
+  [ordered-set->list (ordered-set/c . -> . list?)]))
 
 
 (struct ordered-set
@@ -42,6 +47,7 @@
      
 
 
+(define ordered-set/c (flat-named-contract 'ordered-set ordered-set?))
 
 
 ;; new-ordered-set: [#:order order] -> ordered-set
@@ -303,4 +309,4 @@
                       the-states-and-territories)))))
       
   
-  (run-tests tests))
+  (void (run-tests tests)))
