@@ -170,6 +170,7 @@
   (require rackunit
            rackunit/text-ui
            racket/list
+           racket/string
            (submod ".."))
          
   
@@ -254,6 +255,22 @@
        (ordered-set-add! s "testing")
        (check-equal? (ordered-set->list s) '("hello" "testing" "world")))
 
+     (test-case
+      "we happy band brothers"
+      (define (order-strings-by-length x y)
+        (define xs (string-length x))
+        (define ys (string-length y))
+        (cond [(< xs ys) '<]
+              [(= xs ys) '=]
+              [(> xs ys) '>]))
+      (define s (ordered-set #:order order-strings-by-length))
+      (for ([word (string-split "we few we happy few we band of brothers")])
+        (ordered-set-add! s word))
+      ;; Note that we know that "of" is missing from the list.  That's
+      ;; because the comparison function makes "of" and "we" look the same.
+      (check-equal? (ordered-set->list s)
+                    '("we" "few" "band" "happy" "brothers")))
+     
      (test-case
       "us states"
       ;; http://www.ilru.org/html/publications/directory/state_list.html
