@@ -16,10 +16,12 @@
   [ordered-set? (any/c . -> . boolean?)]
   [ordered-set-order (ordered-set/c . -> . (any/c any/c . -> . ordering/c))]
   [ordered-set/c flat-contract?]
-  [new-ordered-set [() 
-                    (#:order (any/c any/c . -> . ordering/c))
-                    . ->* . 
-                    ordered-set/c]]
+  [rename new-ordered-set ordered-set 
+          [() 
+           (#:order (any/c any/c . -> . ordering/c))
+           #:rest list?
+           . ->* . 
+           ordered-set/c]]
   [ordered-set-empty? (ordered-set/c . -> . boolean?)]
   [ordered-set-count (ordered-set/c . -> . natural-number/c)]
   [ordered-set-member? (ordered-set/c any/c . -> . boolean?)]
@@ -54,8 +56,11 @@
 ;; Creates a new ordered set.
 ;;
 ;; INTERNAL: each node remembers how many elements its subtree contains.
-(define (new-ordered-set #:order [order datum-order])
-  (ordered-set (new-tree #:metadata-f metadata-count-f) order))
+(define (new-ordered-set #:order [order datum-order] . initial-elts)
+  (define a-set (ordered-set (new-tree #:metadata-f metadata-count-f) order))
+  (for ([x (in-list initial-elts)])
+    (ordered-set-add! a-set x))
+  a-set)
 
 
 ;; ordered-set-empty?: ordered-set -> boolean
@@ -169,12 +174,12 @@
      
      (test-case 
       "empty is empty"
-      (check-true (ordered-set-empty? (new-ordered-set)))
-      (check-equal? (ordered-set-count (new-ordered-set)) 0))
+      (check-true (ordered-set-empty? (ordered-set)))
+      (check-equal? (ordered-set-count (ordered-set)) 0))
      
      (test-case
       "non-empty is not empty"
-      (define s (new-ordered-set))
+      (define s (ordered-set))
       (ordered-set-add! s "hello")
       (check-false (ordered-set-empty? s))
       (check-equal? (ordered-set-count s) 1)
@@ -183,14 +188,14 @@
      
      (test-case
       "delete on empty"
-      (define s (new-ordered-set))
+      (define s (ordered-set))
       (ordered-set-remove! s "not there")
       (check-true (ordered-set-empty? s))
       (check-false (ordered-set-member? s "not there")))
      
      (test-case
       "add and remove"
-      (define s (new-ordered-set))
+      (define s (ordered-set))
       (ordered-set-add! s "zelda")
       (check-true (ordered-set-member? s "zelda"))
       (ordered-set-remove! s "zelda")
@@ -200,7 +205,7 @@
      
      (test-case
       "add 2 and remove 1"
-      (define s (new-ordered-set))
+      (define s (ordered-set))
       (ordered-set-add! s "zelda")
       (ordered-set-add! s "link")
       (check-true (ordered-set-member? s "zelda"))
@@ -212,7 +217,7 @@
      
      (test-case
       "add two"
-      (define s (new-ordered-set))
+      (define s (ordered-set))
       (ordered-set-add! s "hello")
       (ordered-set-add! s "world")
       (check-false (ordered-set-empty? s))
@@ -221,7 +226,7 @@
      
      (test-case
       "iteration simple example"
-       (define s (new-ordered-set))
+       (define s (ordered-set))
        (ordered-set-add! s "hello")
        (ordered-set-add! s "world")
        (ordered-set-add! s "testing")
@@ -229,7 +234,7 @@
 
      (test-case
       "to list simple example"
-       (define s (new-ordered-set))
+       (define s (ordered-set))
        (ordered-set-add! s "hello")
        (ordered-set-add! s "world")
        (ordered-set-add! s "testing")
@@ -302,7 +307,7 @@
       ;; Randomly insert all the elements, make sure we still get the
       ;; right list.
       (for ([iteration (in-range 1000)])
-        (define s (new-ordered-set))
+        (define s (ordered-set))
         (for ([x (shuffle the-states-and-territories)])
           (ordered-set-add! s x))
         (check-equal? (ordered-set->list s)

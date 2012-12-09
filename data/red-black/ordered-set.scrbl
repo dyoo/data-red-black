@@ -3,10 +3,11 @@
           scribble/eval
           (for-label data/red-black/ordered-set
                      racket/base
+                     racket/set
                      racket/string))
 
 @(define my-eval (make-base-eval))
-@(my-eval '(require data/red-black/ordered-set racket/string))
+@(my-eval '(require data/red-black/ordered-set racket/string racket/set))
 
 
 @title{Ordered set}
@@ -21,7 +22,7 @@ As a quick example:
 
 @interaction[#:eval my-eval
 (require data/red-black/ordered-set)
-(define s1 (new-ordered-set))
+(define s1 (ordered-set))
 (for ([w (string-split 
           (string-append "this is a test of the emergency broadcast"
                          " system this is only a test"))])
@@ -38,7 +39,7 @@ As a quick example:
 
 For convenience, these ordered sets use the notion of the total-order defined
 by the @racket[datum-order] function in @racketmodname[data/order].  The
-@racket[new-ordered-set] constructor can take an optional @racket[#:order]
+@racket[ordered-set] constructor can take an optional @racket[#:order]
 comparision function to customize how its elements compare:
 @interaction[#:eval my-eval
 @code:comment{order-strings-by-length: string string -> (or/c '< '= '>)}
@@ -48,7 +49,7 @@ comparision function to customize how its elements compare:
   (cond [(< xs ys) '<]
         [(= xs ys) '=]
         [(> xs ys) '>]))
-(define a-set (new-ordered-set #:order order-strings-by-length))
+(define a-set (ordered-set #:order order-strings-by-length))
 (for ([word (string-split "we few we happy few we band of brothers")])
   (ordered-set-add! a-set word))
 (ordered-set->list a-set)
@@ -62,17 +63,45 @@ red-black tree, so that most operations work in time logarithmic to the set's
 
 @section{API}
 
-@defproc[(new-ordered-set [#:order order 
+@defproc[(ordered-set [#:order order 
                                     (any/c any/c . -> . (or/c '< '= '>))
-                                    datum-order])
+                                    datum-order]
+                          [initial-elt any/c] ...)
          ordered-set/c]{
-Constructs a new ordered set.  By default, this uses @racket[datum-order]
-to compare its elements.
+Constructs a new ordered set.
+@interaction[#:eval my-eval
+(define my-set (ordered-set))
+my-set
+(for/list ([x my-set]) x)
+@code:comment{Creating an ordered set with initial elements:}
+(define another-set (ordered-set 3 1 4 1 5 9))
+(for/list ([x another-set]) x)
+]
+
+
+By default, this uses @racket[datum-order]
+to compare its elements; this default can be overridden by providing
+an @racket[#:order] that can compare two elements:
+@interaction[#:eval my-eval
+@code:comment{Overriding #:order for descending sort:}
+(define (cmp x y)
+  (cond [(< x y) '>]
+        [(= x y) '=]
+        [(> x y) '<]))
+(define yet-another-set (ordered-set #:order cmp
+                                         3 1 4 1 5 9))
+(for/list ([x yet-another-set]) x)]
 }
 
 
 @defproc[(ordered-set? [x any/c]) boolean?]{
 Returns true if @racket[x] is an ordered set.
+@interaction[#:eval my-eval
+(ordered-set? (ordered-set))
+(ordered-set? (list 1 2 3))
+@code:comment{The regular, built in sets in Racket's racket/set library}
+@code:comment{are not ordered sets:}
+(ordered-set? (set))]
 }
 
 
