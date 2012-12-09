@@ -16,6 +16,7 @@
   [ordered-set? (any/c . -> . boolean?)]
   [ordered-set-order (ordered-set/c . -> . (any/c any/c . -> . ordering/c))]
   [ordered-set/c flat-contract?]
+  [in-ordered-set (ordered-set/c . -> . sequence?)]
   [rename new-ordered-set ordered-set 
           [() 
            (#:order (any/c any/c . -> . ordering/c))
@@ -30,22 +31,26 @@
   [ordered-set->list (ordered-set/c . -> . list?)]))
 
 
+
+(define (in-ordered-set s)
+  (make-do-sequence 
+   (lambda ()
+     (values
+      (lambda (pos)
+        (node-data pos))
+      (lambda (pos)
+        (successor pos))
+      (tree-first (ordered-set-tree s))
+      (lambda (pos)
+        (not (nil-node? pos)))
+      #f
+      #f))))
+
+
 (struct ordered-set
   (tree order)
   #:property prop:sequence
-  (lambda (s)
-    (make-do-sequence 
-     (lambda ()
-       (values
-        (lambda (pos)
-          (node-data pos))
-        (lambda (pos)
-          (successor pos))
-        (tree-first (ordered-set-tree s))
-        (lambda (pos)
-          (not (nil-node? pos)))
-        #f
-        #f)))))
+  in-ordered-set)
      
 
 
@@ -231,6 +236,15 @@
        (ordered-set-add! s "world")
        (ordered-set-add! s "testing")
        (check-equal? (for/list ([x s]) x) '("hello" "testing" "world")))
+
+     (test-case
+      "iteration simple example 2"
+       (define s (ordered-set))
+       (ordered-set-add! s "hello")
+       (ordered-set-add! s "world")
+       (ordered-set-add! s "testing")
+       (define seq (in-ordered-set s))
+       (check-equal? (for/list ([x seq]) x) '("hello" "testing" "world")))
 
      (test-case
       "to list simple example"

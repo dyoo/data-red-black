@@ -89,7 +89,7 @@ an @racket[#:order] that can compare two elements:
         [(= x y) '=]
         [(> x y) '<]))
 (define yet-another-set (ordered-set #:order cmp
-                                         3 1 4 1 5 9))
+                                     3 1 4 1 5 9))
 (for/list ([x yet-another-set]) x)]
 }
 
@@ -99,7 +99,7 @@ Returns true if @racket[x] is an ordered set.
 @interaction[#:eval my-eval
 (ordered-set? (ordered-set))
 (ordered-set? (list 1 2 3))
-@code:comment{The regular, built in sets in Racket's racket/set library}
+@code:comment{The built in sets in Racket's racket/set library}
 @code:comment{are not ordered sets:}
 (ordered-set? (set))]
 }
@@ -112,21 +112,32 @@ A flat contract for ordered sets.
 
 @defproc[(ordered-set-order [a-set ordered-set/c]) (any/c any/c . -> . (or/c '< '= '>))]{
 Returns the total-ordering function used by ordered set @racket[a-set].
+@interaction[#:eval my-eval
+(define f (ordered-set-order (ordered-set)))
+(f 3 4)
+(f 4 4)
+(f 4 3)]
 }
 
 
 @defproc[(ordered-set-empty? [a-set ordered-set/c]) boolean?]{
 Returns true if the ordered set @racket[a-set] is empty.
+@interaction[#:eval my-eval
+(ordered-set-empty? (ordered-set))
+(ordered-set-empty? (ordered-set 'nonempty "set!"))]
 }
 
 
 @defproc[(ordered-set-count [a-set ordered-set/c]) natural-number/c]{
 Returns the number of elements in the ordered set @racket[a-set].
+@interaction[#:eval my-eval
+(ordered-set-count (ordered-set "duck" "duck" "goose"))
+]
 }
 
 
 @defproc[(ordered-set-member? [a-set ordered-set/c] [x any/c]) boolean?]{
-Returns true if @racket[x] is an elements in ordered set @racket[a-set].
+Returns true if @racket[x] is an element in ordered set @racket[a-set].
 }
 
 
@@ -144,4 +155,14 @@ an element of @racket[a-set], this has no effect.
 @defproc[(ordered-set->list [a-set ordered-set/c]) list?]{
 Returns the elements of ordered set @racket[a-set] as a list, where
 the elements are sorted according to @racket[a-set]'s total-order.
+}
+
+@defproc[(in-ordered-set [a-set ordered-set/c]) sequence?]{
+Explicitly constructs a sequence of the elements in ordered set @racket[a-set].
+
+@interaction[#:eval my-eval
+(define a-sequence (in-ordered-set (ordered-set "a" "b" "b" "a")))
+a-sequence
+(for ([x a-sequence]) (printf "I see: ~a\n" x))
+]
 }
