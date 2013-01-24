@@ -3,7 +3,7 @@
 @title{data-red-black: augmented red black tree structures}
 
 The @tt{data/red-black} library consists of several
-red-black tree data structures.  The submodules include two red-black
+red-black tree data structures.  Its contents include two red-black
 tree implementations:
 @itemize[
 

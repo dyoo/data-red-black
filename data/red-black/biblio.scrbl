@@ -1,5 +1,5 @@
 #lang scribble/manual
-
+@title{Bibliography}
 
 @bibliography[
 @bib-entry[#:key "clrs2009"
