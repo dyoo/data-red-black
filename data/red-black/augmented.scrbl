@@ -114,11 +114,11 @@ of the tree.
 
 
 
-@section{API}
+@section[#:tag "augmented-api"]{API}
 @declare-exporting[data/red-black/augmented]
 
 
-@subsection{Data types}
+@subsection[#:tag "augmented-data-types"]{Data types}
 
 @defproc[(new-tree [#:metadata-f metadata-f #f (or/c #f (any/c node? node? . -> . any))]) tree?]{
 Constructs a new tree.  The tree's root is initially @racket[nil].
@@ -418,7 +418,7 @@ Returns @racket[#t] if node @racket[n] is black.
 }
 
 
-@subsection{Operations}
+@subsection[#:tag "augmented-operations"]{Operations}
 
 @defproc[(insert-first! [t tree?] [n singleton-node?]) void?]{
 Adds node @racket[n] as the first element in tree @racket[t].
@@ -767,7 +767,7 @@ and postorder respectively.
 }
 
 
-@section{Uncontracted library}
+@section[#:tag "augmented-uncontracted"]{Uncontracted library}
 
 This library uses contracts extensively to prevent the user from messing up;
 however, the contract checking may be prohibitively
@@ -782,25 +782,6 @@ checks.  Use this with extreme care: Improper use of the uncontracted form of
 this library may lead to breaking the red-black invariants, or (even worse)
 introducing cycles in the structure.  If you don't know whether you should be
 using the uncontracted forms or not, you probably should not.
-
-
-@section{Bibliography}
-
-@bibliography[
-@bib-entry[#:key "clrs2009"
-           #:title "Introduction to Algorithms, Third Edition"
-           #:is-book? #t
-           #:author "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest, Clifford Stein"
-           #:date "2009"
-           #:url "http://mitpress.mit.edu/books/introduction-algorithms"]
-
-@bib-entry[#:key "wein2005"
-           #:title "Efficient implementation of red-black trees with split and catenate operations"
-           #:author "Ron Wein"
-           #:date "2005"
-           #:url "http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.109.4875"]
-]
-
 
 
 

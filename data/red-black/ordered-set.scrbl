@@ -73,7 +73,7 @@ red-black tree, so that most operations work in time logarithmic to the set's
 @racket[ordered-set-count].
 
 
-@section{API}
+@section[#:tag "ordered-set-api"]{API}
 
 @defproc[(ordered-set [#:order order 
                                     (any/c any/c . -> . (or/c '< '= '>))
