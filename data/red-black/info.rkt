@@ -5,7 +5,7 @@
 (define required-core-version "5.3.1")
 (define version "1.0")
 (define repositories '("4.x"))
-(define scribblings '(("augmented.scrbl") ("positional.scrbl") ("ordered-set.scrbl")))
+(define scribblings '(("manual.scrbl")))
 (define blurb '("General red-black trees.  Includes an implementation
 of augmented red-black trees, where each node has metadata, as well as
 a specialized version for representing string trees with

@@ -1,6 +1,5 @@
 #lang scribble/manual
 
-@section{Bibliography}
 
 @bibliography[
 @bib-entry[#:key "clrs2009"
